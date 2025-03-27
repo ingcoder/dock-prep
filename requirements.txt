@@ -1,0 +1,12 @@
+numpy>=2.2.0
+pdbfixer>=1.11
+openmm>=8.0.0
+biopython>=1.85
+# External tools installed via conda:
+# openbabel>=3.1.0
+# pdb2pqr>=3.6.0
+# jupyter>=1.0.0
+
+# MolProbity tools (already installed in MolProbity directory):
+# - reduce: for adding hydrogens
+# - probe: for clash detection 
