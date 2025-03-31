@@ -1,9 +1,7 @@
 build/
 *.egg-info/
-pdbqt_converter/scripts/mgltools*/
-pdbqt_converter/scripts/MolProbity/
-pdbqt_converter/scripts/molprobity*
-**/__pycache__/
-results/
-**/*.so
-.history/
+scripts/mgltools*/
+scripts/mgltools*
+scripts/MolProbity/
+scripts/molprobity*
+pdbqt_converter/__pycache__/
