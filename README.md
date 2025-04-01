@@ -2,8 +2,6 @@
 
 A streamlined tool for preparing protein structures for molecular docking with AutoDock Vina.
 
-GoogleColab Tutorial: https://colab.research.google.com/drive/1WDyGSLmT-XjFkU1L3d-mtd0GoD7p8EEy?usp=sharing
-
 ## Overview
 
 This tool automates protein structure preparation for molecular docking by:
@@ -11,6 +9,12 @@ This tool automates protein structure preparation for molecular docking by:
 - Extracting specific protein chains by cut-off distance or provided chain ID (useful to trim large proteins to binding site)
 - Adding hydrogen atoms and optimizing side chains
 - Converting optimized PDB files to PDBQT format for AutoDock Vina
+
+## Tutorial
+
+[Run the tutorial in Colab](https://colab.research.google.com/drive/your-notebook-id](https://colab.research.google.com/drive/1WDyGSLmT-XjFkU1L3d-mtd0GoD7p8EEy?usp=sharing))
+
+
 
 ## Installation
 
