@@ -12,7 +12,7 @@ This tool automates protein structure preparation for molecular docking by:
 
 ## Tutorial
 
-[Run the tutorial in Colab](https://colab.research.google.com/drive/your-notebook-id](https://colab.research.google.com/drive/1WDyGSLmT-XjFkU1L3d-mtd0GoD7p8EEy?usp=sharing))
+[Run the tutorial in Colab](https://colab.research.google.com/drive/1WDyGSLmT-XjFkU1L3d-mtd0GoD7p8EEy?usp=sharing)
 
 
 
