@@ -1,11 +1,11 @@
 from setuptools import setup, Extension, find_packages
 
-c_extension = Extension("pdbqt_converter.c_tutorial", sources=['pdbqt_converter/c_tutorial.c'])
+c_extension = Extension("dock_prep.c_tutorial", sources=['dock_prep/c_tutorial.c'])
 
 setup(
-    name="pdbqt_converter",
+    name="dock_prep",
     version='0.1.0-alpha',
-    description='A tool for converting PDB files to PDBQT format for molecular docking',
+    description='A tool for preparing PDB files for molecular docking',
     author='Ingrid Barbosa-Farias',
     author_email='ingrid@simatomic.com',
     packages=find_packages(),
@@ -18,7 +18,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'pdbqt-converter=pdbqt_converter.run:main',
+            'dock-prep=dock_prep.run:main',
         ],
     },
     python_requires='>=3.6',

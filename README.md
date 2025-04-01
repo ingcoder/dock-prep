@@ -1,4 +1,4 @@
-# PDBQT Converter
+# dock-prep - Docking File Preperation Tool
 
 A streamlined tool for preparing protein structures for molecular docking with AutoDock Vina.
 
