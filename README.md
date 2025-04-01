@@ -28,14 +28,14 @@ conda install -c conda-forge numpy pdbfixer openmm biopython openbabel pdb2pqr -
 ### 2. Install PDBQT Converter
 ```bash
 git clone https://github.com/ingcoder/pdbqt-converter.git
-cd pdbqt-converter
+cd dock-prep
 pip install -e .
 ```
 
 ### 3. Install Required Tools
 ```bash
 # Install MGLTools
-cd pdbqt-converter/scripts
+cd dock-prep/scripts
 ./install_mgltools.sh
 
 # Install MolProbity
@@ -47,13 +47,13 @@ cd pdbqt-converter/scripts
 Run the converter with a PDB ID or file:
 ```bash
 # Process entire protein (default behavior)
-pdbqt-converter --pdb_id 2pgh --file_name path/to/protein.pdb --verbose
+dock-prep --pdb_id 2pgh --file_name path/to/protein.pdb --verbose
 
 # Process specific chains
-pdbqt-converter --pdb_id 2pgh --file_name path/to/protein.pdb --target_chains A,B
+dock-prep --pdb_id 2pgh --file_name path/to/protein.pdb --target_chains A,B
 
 # Extract chains by distance from a reference chain in angstrom
-pdbqt-converter --pdb_id 2pgh --file_name path/to/protein.pdb reference_chain A --distance 10.0
+dock-prep --pdb_id 2pgh --file_name path/to/protein.pdb reference_chain A --distance 5.0
 ```
 
 ## Output Files
