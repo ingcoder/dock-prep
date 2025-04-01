@@ -130,14 +130,13 @@ def _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path,
             if verbose:
                 print(f"Restored directory to: {original_cwd}")
 
-def construct_shell_command(tool_name, abs_input_path, abs_output_path):
+def construct_shell_command(tool_name, abs_input_path, abs_output_path, config_file=None):
     """
     Constructs a shell command for a given tool and command.
     """
 
     if tool_name == "MGLTools":
         # Load MGLTools environment variables
-        config_file = os.path.join('/Users/ingrid/Projects/PdbqtConverter/pdbqt_converter/scripts/mgltools_env.json')
         env_vars = get_env_vars(config_file)
         pythonsh = os.path.join(env_vars['MGL_BIN'], 'pythonsh')
         prepare_receptor_script = os.path.join(env_vars['MGL_PACKAGES'], 'AutoDockTools', 'Utilities24', 'prepare_receptor4.py')
@@ -176,7 +175,7 @@ def construct_shell_command(tool_name, abs_input_path, abs_output_path):
     elif tool_name == "PDB2PQR":
         return f"pdb2pqr30 --ff AMBER --keep-chain --titration-state-method propka --with-ph 7.4 {abs_input_path} {abs_output_path}"
    
-def run_program(tool_name, input_path, output_path, verbose=True):
+def run_program(tool_name, input_path, output_path, verbose=True, config_file=None):
     """
     Runs a program with the given tool name and command.
     """
@@ -192,4 +191,4 @@ def run_program(tool_name, input_path, output_path, verbose=True):
     if not command:
         raise ValueError(f"Failed to construct a valid command for {tool_name}")
         
-    _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path, verbose)
+    _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path, verbose, config_file)

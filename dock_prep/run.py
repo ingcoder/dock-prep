@@ -48,8 +48,8 @@ Output:
 
 import argparse
 import os
-from pdbqt_converter.subprocess_handler import run_program
-from pdbqt_converter.structure_handler import *
+from dock_prep.subprocess_handler import run_program
+from dock_prep.structure_handler import *
 
 def parse_arguments():
     """Parse command line arguments."""
@@ -70,27 +70,17 @@ def parse_arguments():
     selection.add_argument("--hetatm_chains", help="Comma-separated list of HETATM chains for identifying binding site")
     
     # Additional parameters
-    parser.add_argument("--cutoff", type=float, default=5.0, 
-                        help="Distance cutoff (Å) for identifying binding site residues")
-    parser.add_argument("--ph", type=float, default=7.4, 
-                        help="pH value for protonation")
-    parser.add_argument("--output_dir", default="results", 
-                        help="Directory for output files")
-    parser.add_argument("--verbose", action="store_true", 
-                        help="Enable verbose output for detailed processing information")
+    parser.add_argument("--cutoff", type=float, default=5.0, help="Distance cutoff (Å) for identifying binding site residues")
+    parser.add_argument("--ph", type=float, default=7.4, help="pH value for protonation")
+    parser.add_argument("--output_dir", default="results", help="Directory for output files")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output for detailed processing information")
     
-    # Parse the arguments
     args = parser.parse_args()
     
     # Validate input file exists
-  
     if not os.path.exists(  os.path.abspath(args.input_file)):
         parser.error(f"Input file not found: {  os.path.abspath(args.input_file)}")
-    
-    # # Validate that at least one chain selection method is provided
-    # if not any([args.target_chains, args.ligand_chains, args.hetatm_chains]):
-    #     parser.error("You must specify at least one of --target_chains, --ligand_chains, or --hetatm_chains")
-    
+     
     # Validate cutoff is positive
     if args.cutoff <= 0:
         parser.error("Distance cutoff must be a positive value")
@@ -115,6 +105,7 @@ def main():
     try:
         # Parse command line arguments
         args = parse_arguments()
+        CONFIG_FILE = os.path.join('/Users/ingrid/Projects/PdbqtConverter/dock-prep/scripts', 'config.json')      
         
         # Add verbose flag to control output level
         VERBOSE = args.verbose

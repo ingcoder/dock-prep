@@ -85,17 +85,21 @@ fi
 cd - > /dev/null
 
 # 3. Create environment variables for MGLTools
-echo -e "${YELLOW}Creating MGLTools environment variables...${NC}"
-cat > mgltools_env.json << EOF
+echo -e "${YELLOW}Creating/updating MGLTools environment variables...${NC}"
+
+CONFIG_FILE="config_env.json"
+
+# Create or overwrite the config file with MGLTools environment
+cat > "$CONFIG_FILE" << EOF
 {
     "MGL_ROOT": "$INSTALL_DIR",
     "MGL_PACKAGES": "$INSTALL_DIR/MGLToolsPckgs",
     "MGL_BIN": "$INSTALL_DIR/bin",
-    "ENV_NAME": "$CONDA_ENV_NAME"
+    "MGL_ENV_NAME": "$CONDA_ENV_NAME"
 }
 EOF
 
-echo -e "${GREEN}Created mgltools_config.json${NC}"
+echo -e "${GREEN}Created/updated ${CONFIG_FILE}${NC}"
 
 echo "# MGLTools Environment Setup" > mgltools_env.sh
 echo "# First activate the conda environment" >> mgltools_env.sh

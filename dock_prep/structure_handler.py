@@ -22,8 +22,7 @@ Date: 2025-03-27
 
 import os
 import sys
-import argparse
-from pdbqt_converter.subprocess_handler import run_program
+from dock_prep.subprocess_handler import run_program
 
 try:
     import numpy as np
