@@ -28,7 +28,7 @@ if conda env list | grep -q "${CONDA_ENV_NAME}"; then
     echo "Conda environment '${CONDA_ENV_NAME}' already exists. Activating it..."
 else
     echo "Creating new conda environment '${CONDA_ENV_NAME}' with Python 2.7..."
-    conda create -y -n ${CONDA_ENV_NAME} python=2.7
+    conda create -y -n ${CONDA_ENV_NAME} python=2.7 numpy
     if [ $? -ne 0 ]; then
         echo -e "${RED}Failed to create conda environment.${NC}"
         exit 1

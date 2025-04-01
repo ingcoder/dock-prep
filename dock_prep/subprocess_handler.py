@@ -60,7 +60,7 @@ def get_env_vars(config_file):
         env_vars = json.load(f)
     return env_vars
 
-def _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path, verbose=True):
+def _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path, verbose=True, config_file=None):
     """
     Runs a subprocess command and returns the output.
     """
@@ -74,7 +74,6 @@ def _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path,
     # Print the conda environment
     conda_env = get_conda_env()
     print(f"Current conda environment: {conda_env}")
- 
     
     try:
         # MGLTools script is looking for the file in the current working directory,
@@ -90,17 +89,23 @@ def _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path,
                 print(f"Changing directory to: {input_dir}")
                 os.chdir(input_dir)
             
-            # Update command to use relative file paths
-            command = construct_shell_command(tool_name, input_filename, output_filename)
-            verbose and print(f"Updated command: {command}")
+            # Update command to use relative file paths - use named parameters to avoid confusion
+            command = construct_shell_command(
+                tool_name=tool_name, 
+                abs_input_path=input_filename, 
+                abs_output_path=output_filename, 
+                pH_value=7.4,  # Default pH value - consider passing this from the calling function if needed
+                config_file=config_file
+            )
+            # verbose and print(f"Updated command: {command}")
         
         # Run the command
         result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=300, check=True)
         
-        # Print command output if verbose
-        if verbose and result.stdout:
-            print("Command output:")
-            print(result.stdout)
+        # # Print command output if verbose
+        # if verbose and result.stdout:
+        #     print("Command output:")
+        #     print(result.stdout)
         
         # Check if the output file was created
         if os.path.exists(abs_output_path):
@@ -127,14 +132,16 @@ def _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path,
         # Always restore the original working directory
         if os.getcwd() != original_cwd:
             os.chdir(original_cwd)
-            if verbose:
-                print(f"Restored directory to: {original_cwd}")
+            # verbose and print(f"Restored directory to: {original_cwd}")
 
-def construct_shell_command(tool_name, abs_input_path, abs_output_path, config_file=None):
+def construct_shell_command(tool_name, abs_input_path, abs_output_path, pH_value, config_file=None):
     """
     Constructs a shell command for a given tool and command.
     """
-
+    # Extract file extensions
+    input_ext = os.path.splitext(abs_input_path)[1].lower().lstrip('.')
+    output_ext = os.path.splitext(abs_output_path)[1].lower().lstrip('.')
+    
     if tool_name == "MGLTools":
         # Load MGLTools environment variables
         env_vars = get_env_vars(config_file)
@@ -148,23 +155,27 @@ def construct_shell_command(tool_name, abs_input_path, abs_output_path, config_f
         input_filename = os.path.basename(abs_input_path) if os.path.isabs(abs_input_path) else abs_input_path
         output_filename = os.path.basename(abs_output_path) if os.path.isabs(abs_output_path) else abs_output_path
         
+        # The "checkhydrogens" option tells the script to "add hydrogens only if there are none already" in the structure.
+        # -C flag tells the script to preserve input charges. It will not add new Gasteiger charges
+        # -U nphs_lps flag. - U defines type of cleanup. nphs_lps remove non-polar hydrogen atoms (C-H hydrogens) and merge their charges with their attached carbon atoms
+        # It's worth noting that the default cleanup setting is more extensive (nphs_lps_waters_nonstdres) Removes water and non standard residues.
+
+        if input_ext == "pqr": 
+            return f"conda run -n {env_vars['MGL_ENV_NAME']} --no-capture-output bash -c 'export PYTHONPATH={env_vars['MGL_PACKAGES']}:$PYTHONPATH && {pythonsh} {prepare_receptor_script} -r {input_filename} -o {output_filename} -A checkhydrogens -C -U nphs_lps'"
+        else:
+            return f"conda run -n {env_vars['MGL_ENV_NAME']} --no-capture-output bash -c 'export PYTHONPATH={env_vars['MGL_PACKAGES']}:$PYTHONPATH && {pythonsh} {prepare_receptor_script} -r {input_filename} -o {output_filename} -A checkhydrogens'"
         # Command for prepare_receptor4.py using conda run (simpler approach)
-        return f"conda run -n {env_vars['ENV_NAME']} {pythonsh} {prepare_receptor_script} -r {input_filename} -o {output_filename} -A checkhydrogens"
+        # return f"conda run -n {env_vars['MGL_ENV_NAME']} {pythonsh} {prepare_receptor_script} -r {input_filename} -o {output_filename} -A checkhydrogens"
     elif tool_name == "OpenBabel":
-        # Determine file formats from extensions
-        input_ext = os.path.splitext(abs_input_path)[1].lower().lstrip('.')
-        output_ext = os.path.splitext(abs_output_path)[1].lower().lstrip('.')
-        
         # Map file extensions to OpenBabel format codes
         format_map = {'pdb': 'pdb','pqr': 'pqr','mol': 'mol','mol2': 'mol2','sdf': 'sdf','xyz': 'xyz','pdbqt': 'pdbqt','mmcif': 'cif','cif': 'cif'}
         input_format = format_map.get(input_ext)
         output_format = format_map.get(output_ext)
         
         # Return the correct OpenBabel command with proper format specifiers
-        return f"obabel -i{input_format} {abs_input_path} -o{output_format} -O {abs_output_path}"    
+        return f"obabel -i{input_format} {abs_input_path} -o{output_format} -O {abs_output_path}"
     elif tool_name == "MolProbity":
         # Define paths to MolProbity executables
-        config_file = os.path.join('/Users/ingrid/Projects/PdbqtConverter/pdbqt_converter/scripts/molprobity_env.json')
         env_vars = get_env_vars(config_file)
         reduce = os.path.join(env_vars['MOLPROBITY_BIN'],'reduce')
         probe = os.path.join(env_vars['MOLPROBITY_BIN'],'probe')
@@ -173,9 +184,9 @@ def construct_shell_command(tool_name, abs_input_path, abs_output_path, config_f
 
         return f"{reduce} -FLIP {abs_input_path} > {abs_output_path}"
     elif tool_name == "PDB2PQR":
-        return f"pdb2pqr30 --ff AMBER --keep-chain --titration-state-method propka --with-ph 7.4 {abs_input_path} {abs_output_path}"
+        return f"pdb2pqr30 --ff AMBER --keep-chain --titration-state-method propka --with-ph {pH_value} {abs_input_path} {abs_output_path}"
    
-def run_program(tool_name, input_path, output_path, verbose=True, config_file=None):
+def run_program(tool_name, input_path, output_path, verbose=True, pH_value=7.4, config_file=None):
     """
     Runs a program with the given tool name and command.
     """
@@ -185,7 +196,12 @@ def run_program(tool_name, input_path, output_path, verbose=True, config_file=No
 
     _check_if_file_exists(abs_input_path)
     
-    command = construct_shell_command(tool_name, abs_input_path, abs_output_path)
+    # Use named parameters to avoid confusion with positional parameters
+    command = construct_shell_command(tool_name=tool_name, 
+                               abs_input_path=abs_input_path, 
+                               abs_output_path=abs_output_path, 
+                               pH_value=pH_value,
+                               config_file=config_file)
     
     # Check if a valid command was returned
     if not command:
