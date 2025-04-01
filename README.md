@@ -2,6 +2,8 @@
 
 A streamlined tool for preparing protein structures for molecular docking with AutoDock Vina.
 
+GoogleColab Tutorial: https://colab.research.google.com/drive/1WDyGSLmT-XjFkU1L3d-mtd0GoD7p8EEy?usp=sharing
+
 ## Overview
 
 This tool automates protein structure preparation for molecular docking by:
