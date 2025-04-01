@@ -15,8 +15,7 @@ setup(
         'biopython',
         'pdbfixer',
         'openmm',
-        'pdb2pqr',
-        'openbabel'
+        'pdb2pqr'
     ],
     entry_points={
         'console_scripts': [
