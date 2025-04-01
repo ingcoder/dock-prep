@@ -1,5 +1,6 @@
 build/
 *.egg-info/
+scripts/config_env.json
 scripts/mgltools*/
 scripts/mgltools*
 scripts/MolProbity/
