@@ -74,6 +74,7 @@ def parse_arguments():
     parser.add_argument("--ph", type=float, default=7.4, help="pH value for protonation")
     parser.add_argument("--output_dir", default="results", help="Directory for output files")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output for detailed processing information")
+    parser.add_argument("--skip_molprobity", action="store_true", help="Disable molprobity and side chain optimization")
     
     args = parser.parse_args()
     
@@ -105,7 +106,9 @@ def main():
     
     # Parse command line arguments
     args = parse_arguments()
-    CONFIG_FILE = os.path.join('/Users/ingrid/Projects/PdbqtConverter/dock-prep/scripts', 'config_env.json')    
+    # Use a relative path based on the script location
+    script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    CONFIG_FILE = os.path.join(script_dir, 'scripts', 'config_env.json')
     
     
     # Add verbose flag to control output level
@@ -239,13 +242,13 @@ def main():
         print(f"  {'Added atoms':<30} {'':<10} {atom_count_after - atom_count_before:<10}")
 
     
-    SKIP_MOLPROBITY = False
-    if SKIP_MOLPROBITY:
+    
+    if args.skip_molprobity:
         #-----------------------------------------------------------------------
         # Step 4: Optimize structure for docking
         #-----------------------------------------------------------------------
-        VERBOSE and add_separator("STEP 6: SKIPPING MOLPROBITY")
-        VERBOSE and add_separator("STEP 6: PROTONATION WITH PDB2PQR")
+        VERBOSE and add_separator("STEP 4: SKIPPING MOLPROBITY")
+        VERBOSE and add_separator("STEP 5: PROTONATION WITH PDB2PQR")
         run_program("PDB2PQR", OUTPUT_REFINED_FILE, OUTPUT_PROTONATED_PQR_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
 
         #-----------------------------------------------------------------------
@@ -275,7 +278,7 @@ def main():
         #-----------------------------------------------------------------------
         # Step 7: Create PDBQT file for AutoDock Vina
         #-----------------------------------------------------------------------
-        VERBOSE and add_separator("STEP 6: CREATING PDBQT FILE FOR AutoDock Vina")  
+        VERBOSE and add_separator("STEP 7: CREATING PDBQT FILE FOR AutoDock Vina")  
         run_program("MGLTools", OUTPUT_PROTONATED_PQR_FILE, OUTPUT_PDBQT_DOCKING_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
 
     

@@ -9,11 +9,32 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}=== Installing MGLTools (AutoDock Tools) ===${NC}"
 
-# Define installation paths
-INSTALL_DIR="$PWD/mgltools_1.5.7_MacOS-X"
-DOWNLOAD_URL="https://ccsb.scripps.edu/download/529/"
-DOWNLOAD_FILE="mgltools_1.5.7_MacOS-X.tar.gz"
+# Detect OS
+OS_TYPE="unknown"
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    OS_TYPE="linux"
+    echo -e "${YELLOW}Detected Linux operating system${NC}"
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    OS_TYPE="mac"
+    echo -e "${YELLOW}Detected macOS operating system${NC}"
+else
+    echo -e "${RED}Unsupported operating system: $OSTYPE${NC}"
+    echo -e "${RED}This script supports Linux and macOS only.${NC}"
+    exit 1
+fi
+
+# Define installation paths based on OS
 CONDA_ENV_NAME="mgltools_py27"
+
+if [[ "$OS_TYPE" == "linux" ]]; then
+    DOWNLOAD_URL="https://ccsb.scripps.edu/download/532/"
+    DOWNLOAD_FILE="mgltools_x86_64Linux2_1.5.7.tar.gz"
+    INSTALL_DIR="$PWD/mgltools_x86_64Linux2_1.5.7"
+elif [[ "$OS_TYPE" == "mac" ]]; then
+    DOWNLOAD_URL="https://ccsb.scripps.edu/download/529/"
+    DOWNLOAD_FILE="mgltools_1.5.7_MacOS-X.tar.gz"
+    INSTALL_DIR="$PWD/mgltools_1.5.7_MacOS-X"
+fi
 
 # Check for conda installation
 echo -e "${YELLOW}Checking for conda installation...${NC}"
