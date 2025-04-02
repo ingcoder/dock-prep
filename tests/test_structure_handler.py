@@ -3,7 +3,7 @@ import os
 import sys
 import tempfile
 import shutil
-from structure_handler import (
+from dock_prep.structure_handler import (
     load_clean_structure,
     save_structure_to_pdb,
     extract_chains_to_pdb,
@@ -12,11 +12,13 @@ from structure_handler import (
 )
 
 class TestStructureHandler(unittest.TestCase):
-    """Test cases for PdbqtConverter structure_handler module."""
+    """Test cases for dock-prep structure_handler module."""
     
     def setUp(self):
         """Set up test environment before each test."""
-        self.example_pdb = os.path.join("examples", "2pgh_original.pdb")
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        package_dir = "dock_prep"
+        self.example_pdb = os.path.join(project_root, package_dir, "examples", "2pgh_original.pdb")
         self.test_dir = tempfile.mkdtemp()
         self.test_output_pdb = os.path.join(self.test_dir, "test_output.pdb")
         
@@ -31,11 +33,11 @@ class TestStructureHandler(unittest.TestCase):
         self.assertIsNotNone(fixer, "PDBFixer object should not be None")
         
         # Verify that the fixer object has a topology attribute
-        self.assertTrue(hasattr(fixer, 'topology'), "PDBFixer object should have topology attribute")
+        self.assertTrue(hasattr(fixer, 'topology'), "PDBFixer object has notopology attribute")
         
         # Verify chains in topology
         chain_count = sum(1 for _ in fixer.topology.chains())
-        self.assertGreater(chain_count, 0, "PDBFixer topology should have at least one chain")
+        self.assertGreater(chain_count, 0, "PDBFixer topology has one chain")
     
     def test_extract_chains_to_pdb(self):
         """Test extracting specific chains from a PDB file."""

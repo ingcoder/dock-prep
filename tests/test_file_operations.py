@@ -9,7 +9,10 @@ class TestFileOperations(unittest.TestCase):
     
     def setUp(self):
         """Set up test environment before each test."""
-        self.example_pdb = os.path.join("examples", "2pgh_original.pdb")
+        # Get the project root directory (2 levels up from this test file)
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        package_dir = "dock_prep"
+        self.example_pdb = os.path.join(project_root, package_dir, "examples", "2pgh_original.pdb")
         self.test_dir = tempfile.mkdtemp()
         self.test_output_pdb = os.path.join(self.test_dir, "test_output.pdb")
     

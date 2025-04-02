@@ -3,14 +3,16 @@ import os
 import sys
 import tempfile
 import shutil
-from subprocess_handler import _check_if_file_exists, construct_shell_command
+from dock_prep.subprocess_handler import _check_if_file_exists, construct_shell_command
 
 class TestSubprocessHandler(unittest.TestCase):
-    """Tests for subprocess_handler module in PdbqtConverter."""
+    """Tests for subprocess_handler module in dock-prep."""
     
     def setUp(self):
         """Set up test environment before each test."""
-        self.example_pdb = os.path.join("examples", "2pgh_original.pdb")
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        package_dir = "dock_prep"
+        self.example_pdb = os.path.join(project_root, package_dir, "examples", "2pgh_original.pdb")
         self.test_dir = tempfile.mkdtemp()
         self.test_file = os.path.join(self.test_dir, "test_file.pdb")
         
@@ -66,7 +68,7 @@ class TestSubprocessHandler(unittest.TestCase):
         output_path = os.path.abspath(output_path)
         
         # Construct the command
-        command = construct_shell_command("OpenBabel", input_path, output_path)
+        command = construct_shell_command("OpenBabel", input_path, output_path, pH_value=7.4)
         
         # Basic check if the command seems reasonable
         self.assertIsNotNone(command, "Command should not be None")
@@ -87,7 +89,7 @@ class TestSubprocessHandler(unittest.TestCase):
         
         # Construct the command
         try:
-            command = construct_shell_command("MGLTools", input_path, output_path)
+            command = construct_shell_command("MGLTools", input_path, output_path, pH_value=7.4)
             
             # Basic check if the command seems reasonable
             self.assertIsNotNone(command, "Command should not be None")

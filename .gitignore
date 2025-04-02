@@ -8,5 +8,4 @@ scripts/molprobity*
 dock_prep/__pycache__/
 dock_prep/*.so
 */results/
-dock_prep/results/*
 dock_prep/results/

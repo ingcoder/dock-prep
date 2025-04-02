@@ -20,6 +20,7 @@ setup(
     entry_points={
         'console_scripts': [
             'dock-prep=dock_prep.run:main',
+            'dock-prep-check=dock_prep.check_dependencies:check_all_dependencies',
         ],
     },
     python_requires='>=3.6',

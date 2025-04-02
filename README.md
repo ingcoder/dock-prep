@@ -42,6 +42,19 @@ cd dock-prep/scripts
 ./install_molprobity.sh
 ```
 
+### 4. Verify Installation
+After installation, you can verify that all dependencies are properly installed:
+```bash
+# Run the dependency checker
+dock-prep-check
+```
+
+This will check that:
+- All required Python packages are installed
+- You're running in a conda environment
+- External tools (OpenBabel, PDB2PQR) are on your PATH
+- Configuration-based tools (MGLTools, MolProbity) are properly configured
+
 ## Usage
 
 Run the converter with a PDB ID or file:
@@ -69,6 +82,13 @@ The tool produces the following output files in the current directory:
 
 - **ImportError: No module named MolKit**: Ensure PYTHONPATH includes MGLToolsPckgs directory
 - **No output file**: Check for error messages, verify input file exists, check write permissions
+
+### Dependency Issues
+If you encounter errors related to missing dependencies, run the dependency checker:
+```bash
+dock-prep-check
+```
+This will help identify which tools or packages need to be installed or properly configured.
 
 ## Dependencies
 

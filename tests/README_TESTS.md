@@ -1,6 +1,6 @@
 # Test Suite for PdbqtConverter
 
-This directory contains several test files to verify the functionality of the PdbqtConverter project. The tests range from basic file operations to more complex tests requiring external dependencies.
+This directory contains several test files to verify the functionality of the dock-prep project. The tests range from basic file operations to more complex tests requiring external dependencies.
 
 ## Available Tests
 

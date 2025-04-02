@@ -3,16 +3,20 @@ import os
 import sys
 
 class TestBasic(unittest.TestCase):
-    """Basic tests for PdbqtConverter."""
+    """Basic tests for dock-prep."""
     
     def setUp(self):
         """Set up test environment before each test."""
-        self.example_pdb = os.path.join("examples", "2pgh_original.pdb")
+        # Get the project root directory (2 levels up from this test file)
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        package_dir = "dock_prep"
+        # Use path relative to project root assuming its two levels up
+        self.example_pdb = os.path.join(project_root, package_dir, "examples", "2pgh_original.pdb")
     
     def test_example_file_exists(self):
         """Test that the example PDB file exists."""
         self.assertTrue(os.path.exists(self.example_pdb), 
-                       f"Example PDB file {self.example_pdb} should exist")
+                       f"Example PDB file {self.example_pdb} does not exist")
     
     def test_file_content(self):
         """Test that the example PDB file has expected content."""
@@ -20,11 +24,11 @@ class TestBasic(unittest.TestCase):
             lines = f.readlines()
         
         # Check if file has content
-        self.assertGreater(len(lines), 0, "Example PDB file should not be empty")
+        self.assertGreater(len(lines), 0, "Example PDB file is empty")
         
         # Check if file has ATOM records
         atom_lines = [line for line in lines if line.startswith("ATOM")]
-        self.assertGreater(len(atom_lines), 0, "Example PDB file should have ATOM records")
+        self.assertGreater(len(atom_lines), 0, "Example PDB file does not have ATOM records")
     
     def test_file_parsing(self):
         """Test basic file parsing of PDB format."""
