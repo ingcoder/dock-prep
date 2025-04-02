@@ -15,7 +15,7 @@ conda activate docking-pipeline
 conda install -c conda-forge numpy pdbfixer openmm biopython openbabel pdb2pqr -y
 
 # Install dock-prep
-git clone https://github.com/ingcoder/pdbqt-converter.git
+git clone https://github.com/ingcoder/dock-prep.git
 cd dock-prep
 pip install -e .
 

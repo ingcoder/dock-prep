@@ -55,16 +55,6 @@ flake8 dock_prep/
 black dock_prep/
 ```
 
-## Documentation
-
-To build the documentation locally:
-
-```bash
-cd docs
-sphinx-build -b html . _build/html
-```
-
-Then open `_build/html/index.html` in your browser.
 
 ## Contributing
 

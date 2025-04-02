@@ -8,11 +8,26 @@ A streamlined tool for preparing protein structures for molecular docking with A
 
 ## Overview
 
-This tool automates protein structure preparation for molecular docking by:
+Molecular docking is a computational technique used to predict how proteins interact with small molecules (ligands), which is essential in drug discovery and structural biology. Before any docking simulation can begin, protein structures obtained from databases like the Protein Data Bank (PDB) require extensive preparation.
+
+For newcomers to computational drug discovery, protein structure preparation can be challenging and time-consuming. Raw PDB files often contain numerous issues that must be addressed:
+
+- Missing atoms or residues that need to be modeled
+- Improper protonation states (missing hydrogen atoms)
+- Steric clashes and unfavorable conformations
+- Binding site that need to be extracted
+- Water molecules and co-crystallized ligands that need to be removed
+- Lack of charge assignments required for simulation
+
+Each of these steps typically requires specialized knowledge and multiple software tools, creating a significant barrier for researchers new to the field.
+
+This tool simplifies this complex process by automating protein structure preparation for molecular docking by:
 - Cleaning and completing PDB structures
 - Extracting specific protein chains by cut-off distance or provided chain ID (useful to trim large proteins to binding site)
 - Adding hydrogen atoms and optimizing side chains
 - Converting optimized PDB files to PDBQT format for AutoDock Vina
+
+By handling these technical steps automatically, dock-prep allows researchers to focus on their scientific questions rather than the intricacies of file format conversion and structure optimization.
 
 ## Tutorial
 
