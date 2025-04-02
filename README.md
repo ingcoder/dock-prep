@@ -1,4 +1,8 @@
-# dock-prep - Docking File Preperation Tool
+# dock-prep - Docking File Preparation Tool
+
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.6+](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/)
+[![GitHub issues](https://img.shields.io/github/issues/ingcoder/pdbqt-converter.svg)](https://github.com/ingcoder/pdbqt-converter/issues)
 
 A streamlined tool for preparing protein structures for molecular docking with AutoDock Vina.
 
@@ -13,8 +17,6 @@ This tool automates protein structure preparation for molecular docking by:
 ## Tutorial
 
 [Run the tutorial in Colab](https://colab.research.google.com/drive/1WDyGSLmT-XjFkU1L3d-mtd0GoD7p8EEy?usp=sharing)
-
-
 
 ## Installation
 
@@ -97,3 +99,25 @@ This tool relies on:
 - **MolProbity**: For structure validation and hydrogen placement
 - **OpenBabel**: For file format conversion (`obabel`)
 - **PDB2PQR**: For protein protonation (`pdb2pqr30`)
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request. Check out our [Contributing Guidelines](CONTRIBUTING.md) for more details.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Citation
+
+If you use this tool in your research, please cite:
+
+```
+Barbosa-Farias, I. (2023). dock-prep: A streamlined tool for preparing protein structures for molecular docking. 
+GitHub repository: https://github.com/ingcoder/dock-prep
+```
+
+## Acknowledgments
+
+- Thanks to all the developers of MGLTools, MolProbity, OpenBabel, and PDB2PQR
+- Special thanks to contributors and users who have provided valuable feedback

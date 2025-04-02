@@ -9,3 +9,4 @@ dock_prep/__pycache__/
 dock_prep/*.so
 */results/
 dock_prep/results/
+tests/__pycache__/
