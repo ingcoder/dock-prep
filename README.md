@@ -29,6 +29,8 @@ This tool simplifies this complex process by automating protein structure prepar
 
 By handling these technical steps automatically, dock-prep allows researchers to focus on their scientific questions rather than the intricacies of file format conversion and structure optimization.
 
+![Image](https://github.com/user-attachments/assets/4527e2ff-c436-4e94-ab1c-bfb86f0a4fed)
+
 <img src="https://github.com/ingcoder/dock-prep/issues/3#issue-2967267898" alt="Alt text" width="300" height="200" align="center">
 
 
