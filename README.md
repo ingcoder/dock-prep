@@ -133,7 +133,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 If you use this tool in your research, please cite:
 
 ```
-Barbosa-Farias, I. (2023). dock-prep: A streamlined tool for preparing protein structures for molecular docking. 
+Barbosa-Farias, I. (2025). dock-prep: A streamlined tool for preparing protein structures for molecular docking. 
 GitHub repository: https://github.com/ingcoder/dock-prep
 ```
 
