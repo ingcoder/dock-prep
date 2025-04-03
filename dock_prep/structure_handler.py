@@ -128,14 +128,14 @@ def restore_original_chain_ids(input_filepath, output_filepath, target_chains, v
 #                     STRUCTURE LOADING AND CLEANING
 #==============================================================================
 
-def load_clean_structure(pdb_filepath, no_hetatm=True, verbose=True):
+def load_clean_structure(input_file, output_file, no_hetatm=True, verbose=True):
     """Loads PDB file, removes heteroatoms, and returns a PDBFixer object."""
     # Validate input file
-    if not os.path.exists(pdb_filepath):
-        raise FileNotFoundError(f"File not found. {pdb_filepath}")
+    if not os.path.exists(input_file):
+        raise FileNotFoundError(f"File not found. {input_file}")
     if verbose:
         # Option 1: Get path relative to current working directory
-        rel_path = os.path.relpath(pdb_filepath)
+        rel_path = os.path.relpath(input_file)
         print("\nPath to PDB file:", rel_path)
         
         # Other options (commented out):
@@ -153,13 +153,17 @@ def load_clean_structure(pdb_filepath, no_hetatm=True, verbose=True):
         # else:
         #     print("• Path to PDB file:", pdb_filepath)
     
-    # Prepare output filename
-    base, ext = os.path.splitext(pdb_filepath)
-    cleaned_filepath = f'{base}_clean{ext}'
+    # # Prepare output filename
+    # base, ext = os.path.splitext(pdb_filepath)
+    # basename = os.path.basename(base)
+    # print(f"• Base: {basename}")
+    # print(os.getcwd)
+    # print(f"• Ext: {ext}")
+    # cleaned_filepath = f'{base}_clean{ext}'
     
     try:
         # Step 1: Read and filter PDB content
-        with open(pdb_filepath, 'r') as f:
+        with open(input_file, 'r') as f:
             lines = f.readlines()
 
         # Step 2: Process lines and filter HETATM records
@@ -178,14 +182,19 @@ def load_clean_structure(pdb_filepath, no_hetatm=True, verbose=True):
     
         # Step 3: Write cleaned content to file
         cleaned_pdb_text = "".join(cleaned_lines)
-        with open(cleaned_filepath, 'w') as f:
+        with open(output_file, 'w') as f:
             f.write(cleaned_pdb_text)
+
+        return load_structure_as_pdbfixer(input_file)
+    except Exception as e:
+        print(f"❌ Error processing PDB file: {e}")
+        raise
         
+
+def load_structure_as_pdbfixer(input_file):
         # Step 4: Create and return PDBFixer object
-        fixer = PDBFixer(filename=cleaned_filepath)
-        if verbose:
-            rel_cleaned_path = os.path.relpath(cleaned_filepath)
-            print(f"✅ Cleaned structure from HETATM and loaded PDBFixer object from: {rel_cleaned_path}")
+    try:
+        fixer = PDBFixer(filename=input_file)
         return fixer
     except Exception as e:
         print(f"❌ Error processing PDB file: {e}")
@@ -299,6 +308,23 @@ def get_missing_residues_by_chain(pdb_fixer, target_chains, verbose=True):
 #==============================================================================
 #                      CHAIN AND RESIDUE ANALYSIS
 #==============================================================================
+
+def get_selected_chains(input_file, selection, fixer_object, cutoff):
+    selected_chains = None
+
+        # Map the original chain IDs to the potentially new IDs after cleaning
+    chain_ids = map_orig_to_new_chain(input_file, selection)
+    # Identify atoms belonging to the specified HETATM chains
+    ligand_atoms = get_ligand_atoms(fixer_object, chain_ids) 
+    # Find protein residues within the cutoff distance of the HETATM atoms
+    residues_near_ligand = get_residues_near_ligand(
+        fixer_object, ligand_atoms, distance_threshold=cutoff
+    )
+    # Determine which chains contain the identified nearby residues
+    selected_chains = get_chains_near_ligand(fixer_object, residues_near_ligand, chain_ids)
+
+    return selected_chains
+
 
 def map_orig_to_new_chain(input_file, ligand_chain_ids, verbose=True):
     """Maps original chain IDs to PDBFixer internal representation."""

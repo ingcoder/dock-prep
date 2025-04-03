@@ -1,40 +1,52 @@
-# dock-prep - Docking File Preparation Tool
+# dock-prep: Automated Protein Preparation Tool for Molecular Docking with AutoDock Vina
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.6+](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/)
 [![GitHub issues](https://img.shields.io/github/issues/ingcoder/pdbqt-converter.svg)](https://github.com/ingcoder/pdbqt-converter/issues)
 
-A streamlined tool for preparing protein structures for molecular docking with AutoDock Vina.
+> **dock-prep** is a powerful, user-friendly tool that automates the preparation of protein structures for molecular docking simulations with AutoDock Vina, streamlining PDB to PDBQT conversion for computational drug discovery.
+
+**Keywords**: protein structure preparation, molecular docking, AutoDock Vina, PDBQT conversion, computational drug discovery, PDB file processing
+
+📋 [Features](#key-features) | 🚀 [Quick Start](#quick-start) | 📖 [Tutorial](#tutorial) | ⚙️ [Installation](#installation) | 🛠️ [Usage](#usage) | 📝 [Documentation](#documentation) | 🤝 [Contributing](#contributing)
+
+![Protein preparation workflow](https://github.com/user-attachments/assets/4527e2ff-c436-4e94-ab1c-bfb86f0a4fed)
 
 ## Overview
 
-Molecular docking is a computational technique used to predict how proteins interact with small molecules (ligands), which is essential in drug discovery and structural biology. Before any docking simulation can begin, protein structures obtained from databases like the Protein Data Bank (PDB) require extensive preparation.
+Molecular docking is a critical computational technique in drug discovery and structural biology that predicts how proteins interact with potential drug compounds (ligands). Before running any docking simulation with tools like AutoDock Vina, protein structures from the Protein Data Bank (PDB) require extensive preparation - a process that is technically challenging and time-consuming, especially for newcomers.
 
-For newcomers to computational drug discovery, protein structure preparation can be challenging and time-consuming. Raw PDB files often contain numerous issues that must be addressed:
+## Key Features
 
-- Missing atoms or residues that need to be modeled
-- Improper protonation states (missing hydrogen atoms)
-- Steric clashes and unfavorable conformations
-- Binding site that need to be extracted
-- Water molecules and co-crystallized ligands that need to be removed
-- Lack of charge assignments required for simulation
+**dock-prep** solves common protein preparation challenges by:
 
-Each of these steps typically requires specialized knowledge and multiple software tools, creating a significant barrier for researchers new to the field.
+- **Automating structure cleaning** - Removes unwanted water molecules, ions, and co-crystallized ligands
+- **Repairing missing atoms and residues** - Completes protein structures with accurate modeling
+- **Optimizing hydrogen placement** - Adds hydrogens at proper protonation states
+- **Resolving steric clashes** - Fixes unfavorable conformations and atomic overlaps
+- **Selecting binding sites** - Extracts specific protein chains by distance cutoffs or chain IDs
+- **Assigning proper charges** - Adds essential charge parameters needed for simulation
+- **Converting to PDBQT format** - Generates ready-to-dock files for AutoDock Vina
 
-This tool simplifies this complex process by automating protein structure preparation for molecular docking by:
-- Cleaning and completing PDB structures
-- Extracting specific protein chains by cut-off distance or provided chain ID (useful to trim large proteins to binding site)
-- Adding hydrogen atoms and optimizing side chains
-- Converting optimized PDB files to PDBQT format for AutoDock Vina
+By handling these technical steps automatically, dock-prep allows researchers to focus on scientific questions rather than the complexities of file preprocessing.
 
-By handling these technical steps automatically, dock-prep allows researchers to focus on their scientific questions rather than the intricacies of file format conversion and structure optimization.
+## Quick Start
 
-![Image](https://github.com/user-attachments/assets/4527e2ff-c436-4e94-ab1c-bfb86f0a4fed)
+```bash
+# Install with conda
+conda create -n docking python=3.10 -y && conda activate docking
+conda install -c conda-forge numpy pdbfixer openmm biopython openbabel pdb2pqr -y
+pip install dock-prep
 
+# Prepare a protein from PDB ID
+dock-prep --pdb_id 1hsg --verbose
+```
 
 ## Tutorial
 
-[Run the tutorial in Colab](https://colab.research.google.com/drive/1WDyGSLmT-XjFkU1L3d-mtd0GoD7p8EEy?usp=sharing)
+Follow our comprehensive tutorial to learn how dock-prep can integrate into your molecular docking workflow:
+
+[Run the interactive tutorial in Google Colab](https://colab.research.google.com/drive/1WDyGSLmT-XjFkU1L3d-mtd0GoD7p8EEy?usp=sharing)
 
 ## Installation
 
@@ -77,40 +89,59 @@ This will check that:
 
 ## Usage
 
+### Basic Commands
+
 Run the converter with a PDB ID or file:
 ```bash
 # Process entire protein (default behavior)
-dock-prep --pdb_id 2pgh --file_name path/to/protein.pdb --verbose
+dock-prep --pdb_id PDBID --file_name path/to/protein.pdb --verbose
 
 # Process specific chains
-dock-prep --pdb_id 2pgh --file_name path/to/protein.pdb --target_chains A,B
+dock-prep --pdb_id PDBID --file_name path/to/protein.pdb --target_chains A,B
 
 # Extract chains by distance from a reference chain in angstrom
-dock-prep --pdb_id 2pgh --file_name path/to/protein.pdb reference_chain A --distance 5.0
+dock-prep --pdb_id PDBID --file_name path/to/protein.pdb reference_chain A --distance 5.0
 ```
 
-## Output Files
+### Output Files 
 
-The tool produces the following output files in the current directory:
-- `[pdb_id]_prepared.pdb`: Cleaned PDB with complete residues and optimized hydrogens
-- `[pdb_id]_prepared.pdbqt`: Final PDBQT file ready for AutoDock Vina docking
-- `[pdb_id]_validation.txt`: Structure validation report from MolProbity (optional)
+The tool generates a series of progressively refined files that document each step in the protein preparation pipeline:
 
-## Troubleshooting
+| File | Description | Purpose in Workflow |
+|------|-------------|---------------------|
+| `[pdb_id]_clean.pdb` | Initial cleaned structure | Removes HETATM records (waters, ligands, ions) and prepares the protein for structural completion |
+| `[pdb_id]_refined.pdb` | Structure with modeled residues | Fills in missing atoms and residues to create a complete protein model |
+| `[pdb_id]_refined_flipped_h_edited.pdb` | Optimized with hydrogens | Contains MolProbity-optimized hydrogen positions and corrected side-chain orientations |
+| `[pdb_id]_refined.pqr` | Protonated structure | Includes atomic radii and charge parameters from PDB2PQR required for electrostatics |
+| `[pdb_id]_refined_docking.pdbqt` | Final docking-ready file | **Primary output file** with all parameters needed for AutoDock Vina docking simulations |
 
-### Common MGLTools Issues
+> **Note**: The `[pdb_id]_refined_docking.pdbqt` file is the primary output that should be used for docking simulations with AutoDock Vina. Intermediate files are preserved to allow inspection of each preparation step.
+
+#### File Formats Explained
+
+- **PDB**: Standard Protein Data Bank format containing atomic coordinates
+- **PQR**: Modified PDB format that includes charge (Q) and radius (R) parameters
+- **PDBQT**: Extended PDB format with partial charges (Q) and atom types (T) required by AutoDock Vina
+
+For advanced users who want to customize the preparation process, these intermediate files can be modified before continuing to the next processing step using the `--input_file` parameter.
+
+## Documentation
+
+### Troubleshooting
+
+#### Common MGLTools Issues
 
 - **ImportError: No module named MolKit**: Ensure PYTHONPATH includes MGLToolsPckgs directory
 - **No output file**: Check for error messages, verify input file exists, check write permissions
 
-### Dependency Issues
+#### Dependency Issues
 If you encounter errors related to missing dependencies, run the dependency checker:
 ```bash
 dock-prep-check
 ```
 This will help identify which tools or packages need to be installed or properly configured.
 
-## Dependencies
+### Dependencies
 
 This tool relies on:
 - **MGLTools**: For PDB to PDBQT conversion

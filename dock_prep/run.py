@@ -106,31 +106,24 @@ def main():
     
     # Parse command line arguments
     args = parse_arguments()
-    # Use a relative path based on the script location
-    script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    CONFIG_FILE = os.path.join(script_dir, 'scripts', 'config_env.json')
-    
-    
-    # Add verbose flag to control output level
     VERBOSE = args.verbose
-    print(f"VERBOSE: {VERBOSE}")
     PDB_ID = args.pdb_id
-    
+    CUTOFF_ANGSTROM = args.cutoff
+    RESULTS_FOLDER = args.output_dir
+    SKIP_MOLPROBITY = args.skip_molprobity
+    pH_VALUE = args.ph
+
     # Parse chain IDs from command line arguments
     TARGET_CHAIN_IDS = args.target_chains.split(',') if args.target_chains else None
     LIGAND_CHAIN_IDS = args.ligand_chains.split(',') if args.ligand_chains else None
     HETATM_CHAIN_IDS = args.hetatm_chains.split(',') if args.hetatm_chains else None
-    
-    # Get other parameters from arguments
-    CUTOFF_ANGSTROM = args.cutoff
-    pH_VALUE = args.ph
-    
+
+    # Use a relative path based on the script location
+    script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    CONFIG_FILE = os.path.join(script_dir, 'scripts', 'config_env.json')
+        
     # Store file paths for final summary
     file_paths = {}
-    
-    # Define file paths for the workflow
-    RESULTS_FOLDER = args.output_dir
-
     results_folder = os.path.abspath(RESULTS_FOLDER)
     if not os.path.exists(RESULTS_FOLDER):
         os.makedirs(RESULTS_FOLDER)
@@ -141,8 +134,10 @@ def main():
     # Store all file paths
     INPUT_ORIGINAL_FILE = args.input_file
     file_paths['input'] = INPUT_ORIGINAL_FILE
-    OUTPUT_BINDING_SITE_FILE = os.path.join(results_folder, f"{PDB_ID}_0_binding_site.pdb")
-    file_paths['binding_site'] = OUTPUT_BINDING_SITE_FILE
+    OUTPUT_CLEANED_FILE = os.path.join(results_folder, f"{PDB_ID}_0_cleaned.pdb")
+    file_paths['cleaned'] = OUTPUT_CLEANED_FILE
+    OUTPUT_SELECTED_CHAINS_FILE = os.path.join(results_folder, f"{PDB_ID}_0_selected_chains.pdb")
+    file_paths['binding_site'] = OUTPUT_SELECTED_CHAINS_FILE
     OUTPUT_TEMP_REFINED_FILE = os.path.join(results_folder, f"{PDB_ID}_1_binding_site_temp_refined.pdb")
     file_paths['temp_refined'] = OUTPUT_TEMP_REFINED_FILE
     OUTPUT_REFINED_FILE = os.path.join(results_folder, f"{PDB_ID}_2_binding_site_refined.pdb")
@@ -163,7 +158,7 @@ def main():
         print("\nProcessing structure preparation workflow...")
     
     #-----------------------------------------------------------------------
-    # Step 0: Load and clean original structure
+    # Step 0: PRINT SETTINGS
     #-----------------------------------------------------------------------
     add_separator("STEP 0: Settings")
     print(f"CONFIG_FILE: {CONFIG_FILE}")
@@ -179,109 +174,122 @@ def main():
     
 
     #-----------------------------------------------------------------------
-    # Step 1: Load and clean original structure
+    # Step 1: Clean and return original structure as PDBFixer object
     #-----------------------------------------------------------------------
     VERBOSE and add_separator("STEP 1: LOADING AND CLEANING ORIGINAL STRUCTURE")
     no_hetatm = True if HETATM_CHAIN_IDS is not None else False
-    fixer_original = load_clean_structure(INPUT_ORIGINAL_FILE, no_hetatm=no_hetatm, verbose=VERBOSE)
+    fixer_original = load_clean_structure(INPUT_ORIGINAL_FILE, OUTPUT_CLEANED_FILE, no_hetatm=no_hetatm, verbose=VERBOSE)
     
+
     #-----------------------------------------------------------------------
-    # Step 2: Extract binding site
+    # Step 2: Define chains to be extracted
     #-----------------------------------------------------------------------
     VERBOSE and add_separator("STEP 2: EXTRACTING BINDING SITE")
-    target_chains = None
+    # Three methods for chain selection, prioritized in this order:
+    # 1. Direct specification of target chains
+    # 2. Extraction based on proximity to provided HETATM chains
+    # 3. Extraction based on proximity to ligand chains
+
+    # Initialize selected chains as None
+    selected_chains = None
+
+    # Method 1: Use directly specified target chains (simplest approach)
     if TARGET_CHAIN_IDS is not None:
-        target_chains = TARGET_CHAIN_IDS
+        selected_chains = TARGET_CHAIN_IDS
+
+    # Method 2: Extract protein chains near specified HETATM chains
     elif HETATM_CHAIN_IDS is not None:
-        hetatm_chain_ids = map_orig_to_new_chain(INPUT_ORIGINAL_FILE, HETATM_CHAIN_IDS)
-        ligand_atoms = get_ligand_atoms(fixer_original, hetatm_chain_ids) 
-        residues_near_ligand = get_residues_near_ligand(
-            fixer_original, ligand_atoms, distance_threshold=CUTOFF_ANGSTROM
-        )
-        target_chains = get_chains_near_ligand(fixer_original, residues_near_ligand, hetatm_chain_ids)
+        selected_chains = get_selected_chains(INPUT_ORIGINAL_FILE, HETATM_CHAIN_IDS, fixer_original, CUTOFF_ANGSTROM)
+    
+    # Method 3: Extract protein chains near specified ligand chains
     elif LIGAND_CHAIN_IDS is not None:
-        ligand_chain_ids = map_orig_to_new_chain(INPUT_ORIGINAL_FILE, LIGAND_CHAIN_IDS)
-        ligand_atoms = get_ligand_atoms(fixer_original, ligand_chain_ids) 
-        residues_near_ligand = get_residues_near_ligand(
-            fixer_original, ligand_atoms, distance_threshold=CUTOFF_ANGSTROM
-        )
-        target_chains = get_chains_near_ligand(fixer_original, residues_near_ligand, ligand_chain_ids)
-            
-    if target_chains is not None:    
-        extract_chains_to_pdb(INPUT_ORIGINAL_FILE, OUTPUT_BINDING_SITE_FILE, target_chains)
+        selected_chains = get_selected_chains(INPUT_ORIGINAL_FILE, LIGAND_CHAIN_IDS, fixer_original, CUTOFF_ANGSTROM)
+
+
+    #-----------------------------------------------------------------------
+    # Step 3: Extract chains
+    #-----------------------------------------------------------------------
+    # Extract only the identified target chains to a new PDB file
+    if selected_chains is not None:    
+        extract_chains_to_pdb(INPUT_ORIGINAL_FILE, OUTPUT_SELECTED_CHAINS_FILE, selected_chains)
     else:
-        OUTPUT_BINDING_SITE_FILE = INPUT_ORIGINAL_FILE
+        # Default fallback: If no chains could be identified, use the entire structure
+        OUTPUT_SELECTED_CHAINS_FILE = INPUT_ORIGINAL_FILE
         VERBOSE and print("No ligand chains specified, using the entire structure")
     
+
     #-----------------------------------------------------------------------
-    # Step 3: Count missing residues
+    # Step 4: Count missing residues
     #-----------------------------------------------------------------------
     VERBOSE and add_separator("STEP 3: REFINING STRUCTURE")
     original_pdbfixer = PDBFixer(filename=INPUT_ORIGINAL_FILE)
     original_pdbfixer.findMissingResidues()
-    missing_residues_original_structure = get_missing_residues_by_chain(original_pdbfixer, target_chains, verbose=VERBOSE)
+    # We use the original structure to count missing residues, to make sure we are not missing any residues
+    missing_residues_original_structure = get_missing_residues_by_chain(original_pdbfixer, selected_chains, verbose=VERBOSE)
+
 
     #-----------------------------------------------------------------------
-    # Step 4: Refine structure
+    # Step 5: Complete missing residues & atoms
     #-----------------------------------------------------------------------
-    fixer_subset = load_clean_structure(OUTPUT_BINDING_SITE_FILE, verbose=VERBOSE)
+    # From here on we use the selected chains 
+    pdb_fixer_object = load_structure_as_pdbfixer(OUTPUT_SELECTED_CHAINS_FILE)
+
     completed_refined_fixer, residue_count_before, atom_count_before, residue_count_after, atom_count_after = complete_missing_structure(
-        fixer_subset, missing_residues_dict=missing_residues_original_structure, verbose=VERBOSE
+        pdb_fixer_object, missing_residues_dict=missing_residues_original_structure, verbose=VERBOSE
     )
     save_structure_to_pdb(completed_refined_fixer, OUTPUT_TEMP_REFINED_FILE, verbose=VERBOSE)
-    restore_original_chain_ids(OUTPUT_TEMP_REFINED_FILE, OUTPUT_REFINED_FILE, target_chains, verbose=VERBOSE)
+    # PDBFixer renames chains. We restore it to the original chain IDs
+    restore_original_chain_ids(OUTPUT_TEMP_REFINED_FILE, OUTPUT_REFINED_FILE, selected_chains, verbose=VERBOSE)
     
-    # Always print the residue counts, even in non-verbose mode
-    if not VERBOSE:
-        print(f"\nStructure completion statistics:")
-        # Using string formatting with fixed width fields
-        print(f"  {'Description':<30} {'Before':<10} {'After':<10}")
-        print(f"  {'-'*30} {'-'*10} {'-'*10}")
-        print(f"  {'Residue count':<30} {residue_count_before:<10} {residue_count_after:<10}")
-        print(f"  {'Atom count':<30} {atom_count_before:<10} {atom_count_after:<10}")
-        print(f"  {'Added atoms':<30} {'':<10} {atom_count_after - atom_count_before:<10}")
+   
+    print(f"\nStructure completion statistics:")
+    # Using string formatting with fixed width fields
+    print(f"  {'Description':<30} {'Before':<10} {'After':<10}")
+    print(f"  {'-'*30} {'-'*10} {'-'*10}")
+    print(f"  {'Residue count':<30} {residue_count_before:<10} {residue_count_after:<10}")
+    print(f"  {'Atom count':<30} {atom_count_before:<10} {atom_count_after:<10}")
+    print(f"  {'Added atoms':<30} {'':<10} {atom_count_after - atom_count_before:<10}")
 
-    
-    
-    if args.skip_molprobity:
+    if SKIP_MOLPROBITY:
         #-----------------------------------------------------------------------
-        # Step 4: Optimize structure for docking
+        # Step 6: Optimize structure for docking
         #-----------------------------------------------------------------------
+        # We skip molprobity and side chain optimization and instead use pdb2pqr to protonate the structure. 
+        # Then we use MGLTools to create the PDBQT file.
         VERBOSE and add_separator("STEP 4: SKIPPING MOLPROBITY")
         VERBOSE and add_separator("STEP 5: PROTONATION WITH PDB2PQR")
         run_program("PDB2PQR", OUTPUT_REFINED_FILE, OUTPUT_PROTONATED_PQR_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
 
         #-----------------------------------------------------------------------
-        # Step 6: Create PDBQT file for AutoDock Vina
+        # Step 7: Create PDBQT file for AutoDock Vina
         #-----------------------------------------------------------------------
         VERBOSE and add_separator("STEP 6: CREATING PDBQT FILE FOR AutoDock Vina")  
         run_program("MGLTools", OUTPUT_PROTONATED_PQR_FILE, OUTPUT_PDBQT_DOCKING_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
     else:
         #-----------------------------------------------------------------------
-        # Step 4: Optimize structure with MolProbity
+        # Step 6: Optimize structure with MolProbity
         #-----------------------------------------------------------------------
         VERBOSE and add_separator("STEP 4: OPTIMIZING STRUCTURE FOR DOCKING")
         run_program("MolProbity", OUTPUT_REFINED_FILE, OUTPUT_FLIPPED_H_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
 
         #-----------------------------------------------------------------------
-        # Step 5: Convert Molprobity file to PDB with OpenBabel
+        # Step 7: Convert Molprobity PDB file to proper PDB with OpenBabel
         #-----------------------------------------------------------------------
         VERBOSE and add_separator("STEP 5: POSTPROCESSING MOLPPROBITY FILE")   
         run_program("OpenBabel", OUTPUT_FLIPPED_H_FILE, OUTPUT_FLIPPED_H_EDITED_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
 
         #-----------------------------------------------------------------------
-        # Step 6: Pronoate with pdb2pqr for correct protonation
+        # Step 8: Pronoate with pdb2pqr for correct protonation
         #-----------------------------------------------------------------------
         VERBOSE and add_separator("STEP 6: PROTONATION WITH PDB2PQR")
         run_program("PDB2PQR", OUTPUT_FLIPPED_H_EDITED_FILE, OUTPUT_PROTONATED_PQR_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
 
         #-----------------------------------------------------------------------
-        # Step 7: Create PDBQT file for AutoDock Vina
+        # Step 9: Create PDBQT file for AutoDock Vina
         #-----------------------------------------------------------------------
         VERBOSE and add_separator("STEP 7: CREATING PDBQT FILE FOR AutoDock Vina")  
         run_program("MGLTools", OUTPUT_PROTONATED_PQR_FILE, OUTPUT_PDBQT_DOCKING_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
 
-    
     
     # Print output files summary in non-verbose mode
     if not VERBOSE:
@@ -289,13 +297,12 @@ def main():
         # Using string formatting with fixed width fields for consistent columns
         print(f"  {'File Type':<30} {'Path':<50}")
         print(f"  {'-'*30} {'-'*50}")
-        print(f"  {'Binding site structure':<30} {os.path.relpath(OUTPUT_BINDING_SITE_FILE):<50}")
+        print(f"  {'Binding site structure':<30} {os.path.relpath(OUTPUT_SELECTED_CHAINS_FILE):<50}")
         print(f"  {'Refined structure':<30} {os.path.relpath(OUTPUT_REFINED_FILE):<50}")
         print(f"  {'Optimized structure':<30} {os.path.relpath(OUTPUT_FLIPPED_H_FILE):<50}")
         print(f"  {'Final PDBQT for docking':<30} {os.path.relpath(OUTPUT_PDBQT_DOCKING_FILE):<50}")
         print("\n✅ Structure preparation completed successfully!")
     
-   
 
 if __name__ == "__main__":
     main()
