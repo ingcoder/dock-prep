@@ -36,10 +36,12 @@ By handling these technical steps automatically, dock-prep allows researchers to
 # Install with conda
 conda create -n docking python=3.10 -y && conda activate docking
 conda install -c conda-forge numpy pdbfixer openmm biopython openbabel pdb2pqr -y
-pip install dock-prep
+pip install -e dock-prep
+
+chmod +x ./scripts/*.sh
 
 # Prepare a protein from PDB ID
-dock-prep --pdb_id 1hsg --verbose
+dock-prep --pdb_id 2pgh dock_prep/examples/2pgh_original.pdb --verbose
 ```
 
 ## Tutorial
@@ -68,11 +70,15 @@ pip install -e .
 ```bash
 # Install MGLTools
 cd dock-prep/scripts
+chmod +x install_mgltools.sh  # Ensure script has executable permissions
 ./install_mgltools.sh
 
 # Install MolProbity
+chmod +x install_molprobity.sh  # Ensure script has executable permissions
 ./install_molprobity.sh
 ```
+
+> **Important Note**: If you encounter "permission denied" errors when running the scripts, you need to manually set executable permissions using the `chmod +x script_name.sh` command. The scripts include self-fixing permission code, but this only works if the script can be executed in the first place.
 
 ### 4. Verify Installation
 After installation, you can verify that all dependencies are properly installed:
@@ -145,7 +151,7 @@ This will help identify which tools or packages need to be installed or properly
 
 This tool relies on:
 - **MGLTools**: For PDB to PDBQT conversion
-- **MolProbity**: For structure validation and hydrogen placement
+- **MolProbity (optional)**: For structure validation and hydrogen placement
 - **OpenBabel**: For file format conversion (`obabel`)
 - **PDB2PQR**: For protein protonation (`pdb2pqr30`)
 

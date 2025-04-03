@@ -1,6 +1,6 @@
 from setuptools import setup, Extension, find_packages
 
-c_extension = Extension("dock_prep.c_tutorial", sources=['dock_prep/c_tutorial.c'])
+c_extension = Extension("dock_prep.c_extension_sample", sources=['dock_prep/c_extension_sample.c'])
 
 setup(
     name="dock_prep",

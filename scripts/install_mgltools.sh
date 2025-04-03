@@ -120,6 +120,46 @@ cat > "$CONFIG_FILE" << EOF
 }
 EOF
 
+
+# Check if file exists and is not empty
+if [ ! -s "$CONFIG_FILE" ]; then
+# Create or overwrite the config file with MGLTools environment
+    cat > "$CONFIG_FILE" << EOF
+    {
+        "MGL_ROOT": "$INSTALL_DIR",
+        "MGL_PACKAGES": "$INSTALL_DIR/MGLToolsPckgs",
+        "MGL_BIN": "$INSTALL_DIR/bin",
+        "MGL_ENV_NAME": "$CONDA_ENV_NAME"
+    }
+EOF
+else
+    # File exists with content, need to update it
+    echo "Processing existing configuration file at $CONFIG_FILE"
+    # Using a Python script to properly update JSON with a heredoc for better readability
+    python <<EOF
+    import json
+
+    # Load existing config
+    with open('$CONFIG_FILE', 'r') as f:
+        try:
+            config = json.load(f)
+        except json.JSONDecodeError:
+            print('Warning: Invalid JSON in config file. Creating new config.')
+            config = {}
+
+    # Update MolProbity settings
+    config['MGL_ROOT'] = '$INSTALL_DIR'
+    config['MGL_PACKAGES'] = '$INSTALL_DIR/MGLToolsPckgs'
+    config['MGL_BIN'] = '$INSTALL_DIR/bin'
+    config['MGL_ENV_NAME'] = '$CONDA_ENV_NAME'
+
+    # Write updated config
+    with open('$CONFIG_FILE', 'w') as f:
+        json.dump(config, f, indent=4)
+EOF
+    echo "Updated existing configuration file with MolProbity settings"
+fi
+
 echo -e "${GREEN}Created/updated ${CONFIG_FILE}${NC}"
 
 echo "# MGLTools Environment Setup" > mgltools_env.sh

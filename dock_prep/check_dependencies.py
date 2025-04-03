@@ -83,7 +83,7 @@ def check_config_tools():
     config_errors = []
     config_file = None
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    possible_config = os.path.join(project_root, "dock_prep", "config.json")
+    possible_config = os.path.join(project_root, "scripts", "config_env.json")
     if os.path.exists(possible_config):
         config_file = possible_config
     else:
