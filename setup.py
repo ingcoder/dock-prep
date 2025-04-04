@@ -1,6 +1,6 @@
 from setuptools import setup, Extension, find_packages
 
-c_extension = Extension("dock_prep.c_extension_sample", sources=['dock_prep/c_extension_sample.c'])
+# c_extension = Extension("dock_prep.c_extension_example", sources=['dock_prep/c_extension_example.c'])
 
 setup(
     name="dock_prep",
@@ -9,7 +9,7 @@ setup(
     author='Ingrid Barbosa-Farias',
     author_email='ingrid@simatomic.com',
     packages=find_packages(),
-    ext_modules=[c_extension],
+    # ext_modules=[c_extension],
     install_requires=[
         'numpy',
         'biopython',
@@ -45,7 +45,7 @@ setup(
         'Operating System :: OS Independent',
     ],
     project_urls={
-        'Bug Reports': 'https://github.com/ingcoder/pdbqt-converter/issues',
-        'Source': 'https://github.com/ingcoder/pdbqt-converter',
+        'Bug Reports': 'https://github.com/ingcoder/dock-prep/issues',
+        'Source': 'https://github.com/ingcoder/dock-prep',
     },
 )
