@@ -25,12 +25,17 @@ echo "======================================================"
 # Save the original directory
 ORIGINAL_DIR="$PWD"
 
-# Set the installation directory to be within pdbqt-converter
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# We'll install everything in the scripts directory
+# PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Set the installation directory to be within scripts folder
 echo -e "${GREEN}=== Installing MolProbity ===${NC}"
 
 echo -e "${YELLOW}Checking for MolProbity installation...${NC}"
 
-INSTALL_DIR="$PWD/MolProbity"
+INSTALL_DIR="$SCRIPT_DIR/MolProbity"
 
 if [ -d "$INSTALL_DIR" ]; then
     echo "MolProbity directory already exists at $INSTALL_DIR"
@@ -46,7 +51,8 @@ if [ -d "$INSTALL_DIR" ]; then
 fi
 
 echo -e "${YELLOW}Downloading MolProbity...${NC}"
-# Move to the pdbqt-converter directory and clone MolProbity repository
+# Move to the scripts directory and clone MolProbity repository
+cd "$SCRIPT_DIR"
 echo "Cloning MolProbity repository into $PWD..."
 git clone https://github.com/rlabduke/MolProbity.git
 cd MolProbity
@@ -60,16 +66,13 @@ chmod +x ./install_via_bootstrap.sh
 echo "Running MolProbity installation script..."
 ./install_via_bootstrap.sh 4
 
-# Return to the original directory for config file operations
-cd "$ORIGINAL_DIR"
-
-# Add MolProbity bin to PATH
+# Add MolProbity bin to PATH (commented out as it's handled by molprobity_env.sh)
 # echo "export PATH=\$PATH:$INSTALL_DIR/molprobity/bin" >> ~/.zshrc
 
 # 3. Create environment variables for MGLTools
 echo -e "${YELLOW}Creating/updating MolProbity environment variables...${NC}"
 
-CONFIG_FILE="config_env.json"
+CONFIG_FILE="$SCRIPT_DIR/config_env.json"
 
 # Detect OS type and set the bin directory accordingly
 if [[ "$(uname)" == "Darwin" ]]; then
@@ -127,12 +130,12 @@ echo -e "${GREEN}Created/updated ${CONFIG_FILE}${NC}"
 
 # 3. Create environment variables for MGLTools
 echo -e "${YELLOW}Setting up environment variables...${NC}"
-echo "# MolProbity Environment Setup" > molprobity_env.sh
-echo "export MOLPROBITY_ROOT=\"$INSTALL_DIR\"" >> molprobity_env.sh
-echo "export PATH=\"$INSTALL_DIR/bin:\$PATH\"" >> molprobity_env.sh
+echo "# MolProbity Environment Setup" > "$SCRIPT_DIR/molprobity_env.sh"
+echo "export MOLPROBITY_ROOT=\"$INSTALL_DIR\"" >> "$SCRIPT_DIR/molprobity_env.sh"
+echo "export PATH=\"$INSTALL_DIR/bin:\$PATH\"" >> "$SCRIPT_DIR/molprobity_env.sh"
 
 # Make the environment file executable
-chmod +x molprobity_env.sh
+chmod +x "$SCRIPT_DIR/molprobity_env.sh"
 
 echo ""
 echo "======================================================"
@@ -142,7 +145,7 @@ echo ""
 echo "MolProbity has been installed in: $INSTALL_DIR"
 echo ""
 echo "To activate MolProbity environment, please run:"
-echo "  source $PWD/molprobity_env.sh"
+echo "  source $SCRIPT_DIR/molprobity_env.sh"
 echo "You can now use MolProbity tools like 'reduce' and 'probe'"
 echo "from the command line."
 echo "======================================================" 

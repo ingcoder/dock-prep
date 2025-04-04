@@ -9,6 +9,10 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}=== Installing MGLTools (AutoDock Tools) ===${NC}"
 
+# Get the script directory to use as installation base path
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+echo -e "${YELLOW}Installation will be performed in: ${SCRIPT_DIR}${NC}"
+
 # Detect OS
 OS_TYPE="unknown"
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
@@ -29,11 +33,11 @@ CONDA_ENV_NAME="mgltools_py27"
 if [[ "$OS_TYPE" == "linux" ]]; then
     DOWNLOAD_URL="https://ccsb.scripps.edu/download/532/"
     DOWNLOAD_FILE="mgltools_x86_64Linux2_1.5.7.tar.gz"
-    INSTALL_DIR="$PWD/mgltools_x86_64Linux2_1.5.7"
+    INSTALL_DIR="${SCRIPT_DIR}/mgltools_x86_64Linux2_1.5.7"
 elif [[ "$OS_TYPE" == "mac" ]]; then
     DOWNLOAD_URL="https://ccsb.scripps.edu/download/529/"
     DOWNLOAD_FILE="mgltools_1.5.7_MacOS-X.tar.gz"
-    INSTALL_DIR="$PWD/mgltools_1.5.7_MacOS-X"
+    INSTALL_DIR="${SCRIPT_DIR}/mgltools_1.5.7_MacOS-X"
 fi
 
 # Check for conda installation
@@ -67,6 +71,8 @@ echo -e "${GREEN}Successfully activated conda environment: ${CONDA_ENV_NAME}${NC
 
 # 1. Download MGLTools
 echo -e "${YELLOW}Downloading MGLTools...${NC}"
+# Change to script directory before downloading
+cd "${SCRIPT_DIR}"
 if [ -f "$DOWNLOAD_FILE" ]; then
     echo "MGLTools archive already exists. Removing and re-downloading..."
     rm "$DOWNLOAD_FILE"
@@ -100,15 +106,15 @@ chmod +x install.sh
 ./install.sh
 if [ $? -ne 0 ]; then
     echo -e "${RED}Failed to install MGLTools.${NC}"
-    cd - > /dev/null
+    cd "${SCRIPT_DIR}" > /dev/null
     exit 1
 fi
-cd - > /dev/null
+cd "${SCRIPT_DIR}" > /dev/null
 
 # 3. Create environment variables for MGLTools
 echo -e "${YELLOW}Creating/updating MGLTools environment variables...${NC}"
 
-CONFIG_FILE="config_env.json"
+CONFIG_FILE="${SCRIPT_DIR}/config_env.json"
 
 # Create or overwrite the config file with MGLTools environment
 cat > "$CONFIG_FILE" << EOF
@@ -162,20 +168,21 @@ fi
 
 echo -e "${GREEN}Created/updated ${CONFIG_FILE}${NC}"
 
-echo "# MGLTools Environment Setup" > mgltools_env.sh
-echo "# First activate the conda environment" >> mgltools_env.sh
-echo "eval \"\$(conda shell.bash hook)\"" >> mgltools_env.sh
-echo "conda activate ${CONDA_ENV_NAME}" >> mgltools_env.sh
-echo "# Then set MGLTools environment variables" >> mgltools_env.sh
-echo "export MGL_ROOT=\"$INSTALL_DIR\"" >> mgltools_env.sh
-echo "export PYTHONPATH=\"$INSTALL_DIR/MGLToolsPckgs:\$PYTHONPATH\"" >> mgltools_env.sh
-echo "export PATH=\"$INSTALL_DIR/bin:\$PATH\"" >> mgltools_env.sh
+ENV_FILE="${SCRIPT_DIR}/mgltools_env.sh"
+echo "# MGLTools Environment Setup" > "$ENV_FILE"
+echo "# First activate the conda environment" >> "$ENV_FILE"
+echo "eval \"\$(conda shell.bash hook)\"" >> "$ENV_FILE"
+echo "conda activate ${CONDA_ENV_NAME}" >> "$ENV_FILE"
+echo "# Then set MGLTools environment variables" >> "$ENV_FILE"
+echo "export MGL_ROOT=\"$INSTALL_DIR\"" >> "$ENV_FILE"
+echo "export PYTHONPATH=\"$INSTALL_DIR/MGLToolsPckgs:\$PYTHONPATH\"" >> "$ENV_FILE"
+echo "export PATH=\"$INSTALL_DIR/bin:\$PATH\"" >> "$ENV_FILE"
 
 # Make the environment file executable
-chmod +x mgltools_env.sh
+chmod +x "$ENV_FILE"
 
 echo -e "${GREEN}MGLTools installation complete in conda environment: ${CONDA_ENV_NAME}!${NC}"
-echo -e "To use MGLTools, run: source $PWD/mgltools_env.sh"
+echo -e "To use MGLTools, run: source ${ENV_FILE}"
 echo -e "This will activate the conda environment and set up MGLTools paths."
 echo -e "Then you can convert PDB files with:"
 echo -e "  $INSTALL_DIR/bin/pythonsh $INSTALL_DIR/MGLToolsPckgs/AutoDockTools/Utilities24/prepare_receptor4.py -r protein.pdb -o protein.pdbqt"
