@@ -134,26 +134,24 @@ def main():
     # Store all file paths
     INPUT_ORIGINAL_FILE = args.input_file
     file_paths['input'] = INPUT_ORIGINAL_FILE
-    OUTPUT_CLEANED_FILE = os.path.join(results_folder, f"{PDB_ID}_0_structure_cleaned.pdb")
-    file_paths['cleaned'] = OUTPUT_CLEANED_FILE
-    OUTPUT_SELECTED_CHAINS_FILE = os.path.join(results_folder, f"{PDB_ID}_0_structure_selected_chains.pdb")
-    file_paths['binding_site'] = OUTPUT_SELECTED_CHAINS_FILE
-    OUTPUT_TEMP_REFINED_FILE = os.path.join(results_folder, f"{PDB_ID}_1_temp_structure_completed.pdb")
-    file_paths['temp_refined'] = OUTPUT_TEMP_REFINED_FILE
-    OUTPUT_REFINED_FILE = os.path.join(results_folder, f"{PDB_ID}_2_structure_completed.pdb")
-    file_paths['refined'] = OUTPUT_REFINED_FILE
-    OUTPUT_FLIPPED_H_FILE = os.path.join(results_folder, f"{PDB_ID}_3_structure_flipped_h.pdb")
-    file_paths['optimized'] = OUTPUT_FLIPPED_H_FILE
-    OUTPUT_FLIPPED_H_EDITED_FILE = os.path.join(results_folder, f"{PDB_ID}_4_structure_flipped_h_edited.pdb")
-    file_paths['edited'] = OUTPUT_FLIPPED_H_EDITED_FILE
-    OUTPUT_PROTONATED_PQR_FILE = os.path.join(results_folder, f"{PDB_ID}_5_structure_pka_protonated.pqr")
-    file_paths['protonated_pqr'] = OUTPUT_PROTONATED_PQR_FILE
-    OUTPUT_FINAL_PDB_FILE = os.path.join(results_folder, f"{PDB_ID}_6_structure_pka_protonated.pdb")
-    file_paths['final'] = OUTPUT_FINAL_PDB_FILE
-    OUTPUT_PDBQT_DOCKING_FILE = os.path.join(results_folder, f"{PDB_ID}_7_structure_docking_ready.pdbqt")
-    file_paths['docking'] = OUTPUT_PDBQT_DOCKING_FILE
-    
-    file_paths['final'] = OUTPUT_FINAL_PDB_FILE
+    CLEANED_FILE = os.path.join(results_folder, f"{PDB_ID}_0_structure_cleaned.pdb")
+    file_paths['cleaned'] = CLEANED_FILE
+    SELECTED_CHAINS_FILE = os.path.join(results_folder, f"{PDB_ID}_0_structure_selected_chains.pdb")
+    file_paths['binding_site'] = SELECTED_CHAINS_FILE
+    COMPLETED_TEMP_FILE = os.path.join(results_folder, f"{PDB_ID}_1_structure_completed_temp.pdb")
+    file_paths['temp_refined'] = COMPLETED_TEMP_FILE
+    COMPLETED_FINAL_FILE = os.path.join(results_folder, f"{PDB_ID}_2_structure_completed_final.pdb")
+    file_paths['refined'] = COMPLETED_FINAL_FILE
+    FLIPPED_H_TEMP_FILE = os.path.join(results_folder, f"{PDB_ID}_3_structure_flipped_h_temp.pdb")
+    file_paths['optimized'] = FLIPPED_H_TEMP_FILE
+    FLIPPED_H_FINAL_FILE = os.path.join(results_folder, f"{PDB_ID}_4_structure_flipped_h_final.pdb")
+    file_paths['edited'] = FLIPPED_H_FINAL_FILE
+    PROTONATED_PQR_FILE = os.path.join(results_folder, f"{PDB_ID}_5_structure_protonated.pqr")
+    file_paths['protonated_pqr'] = PROTONATED_PQR_FILE
+    DOCKING_FILE = os.path.join(results_folder, f"{PDB_ID}_6_structure_docking.pdbqt")
+    file_paths['docking'] = DOCKING_FILE
+    # OUTPUT_FINAL_PDB_FILE = os.path.join(results_folder, f"{PDB_ID}_6_structure_pka_protonated.pdb")
+    # file_paths['final'] = OUTPUT_FINAL_PDB_FILE
 
     # Print initial message
     if not VERBOSE:
@@ -180,7 +178,7 @@ def main():
     #-----------------------------------------------------------------------
     VERBOSE and add_separator("STEP 1: LOADING AND CLEANING ORIGINAL STRUCTURE")
     no_hetatm = True if HETATM_CHAIN_IDS is not None else False
-    fixer_original = load_clean_structure(INPUT_ORIGINAL_FILE, OUTPUT_CLEANED_FILE, no_hetatm=no_hetatm, verbose=VERBOSE)
+    fixer_original = load_clean_structure(INPUT_ORIGINAL_FILE, CLEANED_FILE, no_hetatm=no_hetatm, verbose=VERBOSE)
     
 
     #-----------------------------------------------------------------------
@@ -213,10 +211,10 @@ def main():
     #-----------------------------------------------------------------------
     # Extract only the identified target chains to a new PDB file
     if selected_chains is not None:    
-        extract_chains_to_pdb(INPUT_ORIGINAL_FILE, OUTPUT_SELECTED_CHAINS_FILE, selected_chains)
+        extract_chains_to_pdb(INPUT_ORIGINAL_FILE, SELECTED_CHAINS_FILE, selected_chains)
     else:
         # Default fallback: If no chains could be identified, use the entire structure
-        OUTPUT_SELECTED_CHAINS_FILE = INPUT_ORIGINAL_FILE
+        SELECTED_CHAINS_FILE = INPUT_ORIGINAL_FILE
         VERBOSE and print("No ligand chains specified, using the entire structure")
     
 
@@ -234,14 +232,14 @@ def main():
     # Step 5: Complete missing residues & atoms
     #-----------------------------------------------------------------------
     # From here on we use the selected chains 
-    pdb_fixer_object = load_structure_as_pdbfixer(OUTPUT_SELECTED_CHAINS_FILE)
+    pdb_fixer_object = load_structure_as_pdbfixer(SELECTED_CHAINS_FILE)
 
     completed_refined_fixer, residue_count_before, atom_count_before, residue_count_after, atom_count_after = complete_missing_structure(
         pdb_fixer_object, missing_residues_dict=missing_residues_original_structure, verbose=VERBOSE
     )
-    save_structure_to_pdb(completed_refined_fixer, OUTPUT_TEMP_REFINED_FILE, verbose=VERBOSE)
+    save_structure_to_pdb(completed_refined_fixer, COMPLETED_TEMP_FILE, verbose=VERBOSE)
     # PDBFixer renames chains. We restore it to the original chain IDs
-    restore_original_chain_ids(OUTPUT_TEMP_REFINED_FILE, OUTPUT_REFINED_FILE, selected_chains, verbose=VERBOSE)
+    restore_original_chain_ids(COMPLETED_TEMP_FILE, COMPLETED_FINAL_FILE, selected_chains, verbose=VERBOSE)
     
    
     print(f"\nStructure completion statistics:")
@@ -260,37 +258,37 @@ def main():
         # Then we use MGLTools to create the PDBQT file.
         VERBOSE and add_separator("STEP 4: SKIPPING MOLPROBITY")
         VERBOSE and add_separator("STEP 5: PROTONATION WITH PDB2PQR")
-        run_program("PDB2PQR", OUTPUT_REFINED_FILE, OUTPUT_PROTONATED_PQR_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
+        run_program("PDB2PQR", COMPLETED_FINAL_FILE, PROTONATED_PQR_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
 
         #-----------------------------------------------------------------------
         # Step 7: Create PDBQT file for AutoDock Vina
         #-----------------------------------------------------------------------
         VERBOSE and add_separator("STEP 6: CREATING PDBQT FILE FOR AutoDock Vina")  
-        run_program("MGLTools", OUTPUT_PROTONATED_PQR_FILE, OUTPUT_PDBQT_DOCKING_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
+        run_program("MGLTools", PROTONATED_PQR_FILE, DOCKING_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
     else:
         #-----------------------------------------------------------------------
         # Step 6: Optimize structure with MolProbity
         #-----------------------------------------------------------------------
         VERBOSE and add_separator("STEP 4: OPTIMIZING STRUCTURE FOR DOCKING")
-        run_program("MolProbity", OUTPUT_REFINED_FILE, OUTPUT_FLIPPED_H_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
+        run_program("MolProbity", COMPLETED_FINAL_FILE, FLIPPED_H_TEMP_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
 
         #-----------------------------------------------------------------------
         # Step 7: Convert Molprobity PDB file to proper PDB with OpenBabel
         #-----------------------------------------------------------------------
         VERBOSE and add_separator("STEP 5: POSTPROCESSING MOLPPROBITY FILE")   
-        run_program("OpenBabel", OUTPUT_FLIPPED_H_FILE, OUTPUT_FLIPPED_H_EDITED_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
+        run_program("OpenBabel", FLIPPED_H_TEMP_FILE, FLIPPED_H_FINAL_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
 
         #-----------------------------------------------------------------------
         # Step 8: Pronoate with pdb2pqr for correct protonation
         #-----------------------------------------------------------------------
         VERBOSE and add_separator("STEP 6: PROTONATION WITH PDB2PQR")
-        run_program("PDB2PQR", OUTPUT_FLIPPED_H_EDITED_FILE, OUTPUT_PROTONATED_PQR_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
+        run_program("PDB2PQR", FLIPPED_H_FINAL_FILE, PROTONATED_PQR_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
 
         #-----------------------------------------------------------------------
         # Step 9: Create PDBQT file for AutoDock Vina
         #-----------------------------------------------------------------------
         VERBOSE and add_separator("STEP 7: CREATING PDBQT FILE FOR AutoDock Vina")  
-        run_program("MGLTools", OUTPUT_PROTONATED_PQR_FILE, OUTPUT_PDBQT_DOCKING_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
+        run_program("MGLTools", PROTONATED_PQR_FILE, DOCKING_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
 
     
     # Print output files summary in non-verbose mode
@@ -299,10 +297,10 @@ def main():
         # Using string formatting with fixed width fields for consistent columns
         print(f"  {'File Type':<30} {'Path':<50}")
         print(f"  {'-'*30} {'-'*50}")
-        print(f"  {'Binding site structure':<30} {os.path.relpath(OUTPUT_SELECTED_CHAINS_FILE):<50}")
-        print(f"  {'Refined structure':<30} {os.path.relpath(OUTPUT_REFINED_FILE):<50}")
-        print(f"  {'Optimized structure':<30} {os.path.relpath(OUTPUT_FLIPPED_H_FILE):<50}")
-        print(f"  {'Final PDBQT for docking':<30} {os.path.relpath(OUTPUT_PDBQT_DOCKING_FILE):<50}")
+        print(f"  {'Binding site structure':<30} {os.path.relpath(SELECTED_CHAINS_FILE):<50}")
+        print(f"  {'Refined structure':<30} {os.path.relpath(COMPLETED_FINAL_FILE):<50}")
+        print(f"  {'Optimized structure':<30} {os.path.relpath(FLIPPED_H_FINAL_FILE):<50}")
+        print(f"  {'Final PDBQT for docking':<30} {os.path.relpath(DOCKING_FILE):<50}")
         print("\n✅ Structure preparation completed successfully!")
     
 
