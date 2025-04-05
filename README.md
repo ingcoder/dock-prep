@@ -33,12 +33,18 @@ By handling these technical steps automatically, dock-prep allows researchers to
 ## Quick Start
 
 ```bash
-# Install with conda
+# Install dependencies with conda
 conda create -n docking python=3.10 -y && conda activate docking
 conda install -c conda-forge numpy pdbfixer openmm biopython openbabel pdb2pqr -y
-pip install -e dock-prep
 
-chmod +x ./scripts/*.sh
+# Install dock-prep
+git clone https://github.com/ingcoder/dock-prep.git
+pip install -e dock-prep 
+
+# Install external tools
+chmod +x dock-prep/scripts/*.sh
+./dock-prep/scripts/install_mgltools.sh
+./dock-prep/scripts/install_molprobity.sh
 
 # Prepare a protein from PDB ID
 dock-prep --pdb_id 2pgh dock_prep/examples/2pgh_original.pdb --verbose
@@ -59,11 +65,10 @@ conda activate docking-pipeline
 conda install -c conda-forge numpy pdbfixer openmm biopython openbabel pdb2pqr -y
 ```
 
-### 2. Install PDBQT Converter
+### 2. Install dock-prep 
 ```bash
-git clone https://github.com/ingcoder/pdbqt-converter.git
-cd dock-prep
-pip install -e .
+git clone https://github.com/ingcoder/dock-prep.git
+pip install -e dock-prep 
 ```
 
 ### 3. Install Required Tools

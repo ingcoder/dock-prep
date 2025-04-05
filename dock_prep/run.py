@@ -134,23 +134,25 @@ def main():
     # Store all file paths
     INPUT_ORIGINAL_FILE = args.input_file
     file_paths['input'] = INPUT_ORIGINAL_FILE
-    OUTPUT_CLEANED_FILE = os.path.join(results_folder, f"{PDB_ID}_0_cleaned.pdb")
+    OUTPUT_CLEANED_FILE = os.path.join(results_folder, f"{PDB_ID}_0_structure_cleaned.pdb")
     file_paths['cleaned'] = OUTPUT_CLEANED_FILE
-    OUTPUT_SELECTED_CHAINS_FILE = os.path.join(results_folder, f"{PDB_ID}_0_selected_chains.pdb")
+    OUTPUT_SELECTED_CHAINS_FILE = os.path.join(results_folder, f"{PDB_ID}_0_structure_selected_chains.pdb")
     file_paths['binding_site'] = OUTPUT_SELECTED_CHAINS_FILE
-    OUTPUT_TEMP_REFINED_FILE = os.path.join(results_folder, f"{PDB_ID}_1_binding_site_temp_refined.pdb")
+    OUTPUT_TEMP_REFINED_FILE = os.path.join(results_folder, f"{PDB_ID}_1_temp_structure_completed.pdb")
     file_paths['temp_refined'] = OUTPUT_TEMP_REFINED_FILE
-    OUTPUT_REFINED_FILE = os.path.join(results_folder, f"{PDB_ID}_2_binding_site_refined.pdb")
+    OUTPUT_REFINED_FILE = os.path.join(results_folder, f"{PDB_ID}_2_structure_completed.pdb")
     file_paths['refined'] = OUTPUT_REFINED_FILE
-    OUTPUT_FLIPPED_H_FILE = os.path.join(results_folder, f"{PDB_ID}_3_binding_site_refined_flipped_h.pdb")
+    OUTPUT_FLIPPED_H_FILE = os.path.join(results_folder, f"{PDB_ID}_3_structure_flipped_h.pdb")
     file_paths['optimized'] = OUTPUT_FLIPPED_H_FILE
-    OUTPUT_FLIPPED_H_EDITED_FILE = os.path.join(results_folder, f"{PDB_ID}_4_binding_site_refined_flipped_h_edited.pdb")
+    OUTPUT_FLIPPED_H_EDITED_FILE = os.path.join(results_folder, f"{PDB_ID}_4_structure_flipped_h_edited.pdb")
     file_paths['edited'] = OUTPUT_FLIPPED_H_EDITED_FILE
-    OUTPUT_PDBQT_DOCKING_FILE = os.path.join(results_folder, f"{PDB_ID}_5_binding_site_refined_docking.pdbqt")
-    file_paths['docking'] = OUTPUT_PDBQT_DOCKING_FILE
-    OUTPUT_PROTONATED_PQR_FILE = os.path.join(results_folder, f"{PDB_ID}_6_binding_site_refined_protonated.pqr")
+    OUTPUT_PROTONATED_PQR_FILE = os.path.join(results_folder, f"{PDB_ID}_5_structure_pka_protonated.pqr")
     file_paths['protonated_pqr'] = OUTPUT_PROTONATED_PQR_FILE
-    OUTPUT_FINAL_PDB_FILE = os.path.join(results_folder, f"{PDB_ID}_7_binding_site_protonated.pdb")
+    OUTPUT_FINAL_PDB_FILE = os.path.join(results_folder, f"{PDB_ID}_6_structure_pka_protonated.pdb")
+    file_paths['final'] = OUTPUT_FINAL_PDB_FILE
+    OUTPUT_PDBQT_DOCKING_FILE = os.path.join(results_folder, f"{PDB_ID}_7_structure_docking_ready.pdbqt")
+    file_paths['docking'] = OUTPUT_PDBQT_DOCKING_FILE
+    
     file_paths['final'] = OUTPUT_FINAL_PDB_FILE
 
     # Print initial message
