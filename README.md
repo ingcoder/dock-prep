@@ -10,54 +10,37 @@
 ![Protein preparation workflow](https://github.com/user-attachments/assets/4527e2ff-c436-4e94-ab1c-bfb86f0a4fed)
 **Keywords**: protein structure preparation, molecular docking, AutoDock Vina, PDBQT conversion, computational drug discovery, PDB file processing
 
-## **dock-prep** is a powerful, user-friendly tool that automates the preparation of protein structures for molecular docking simulations with AutoDock Vina, streamlining PDB to PDBQT conversion for computational drug discovery. Designed for researchers to quickly setup docking without the complex steps. 
+## What is dock-prep?
+**dock-prep** is a powerful, user-friendly tool that automates the preparation of protein structures for molecular docking with AutoDock Vina, streamlining PDB to PDBQT creation for computational drug discovery. Designed for researchers to quickly setup docking without the complex steps. 
 
 ## Why use dock-prep?
-Molecular docking is a critical computational technique in drug discovery and structural biology that predicts how proteins interact with potential drug compounds (ligands). Before running any docking simulation with tools like AutoDock Vina, protein structures from the Protein Data Bank (PDB) require extensive preparation - a process that is technically challenging and time-consuming, especially for newcomers.
+**dock-prep** handles the entire pipeline of file preperation, reducing manual errors, ensuring consistency and saving time. 
 
-**dock-prep** eliminates these barriers by:
+#### Key Features & Benefits
 
-1. **Reducing technical complexity** - What normally requires multiple specialized tools and domain expertise becomes a simple, one-line command
-2. **Saving significant time** - Preparation that typically takes hours of manual work is completed in minutes
-3. **Minimizing user errors** - Automated protocols ensure consistent, reproducible results without human-introduced mistakes
-4. **Providing a standardized workflow** - Creates a uniform process that ensures all structures meet quality standards for reliable docking results
-5. **Maintaining full traceability** - Generates intermediate files at each step, allowing for quality control and methodological transparency
+| Feature                      | What It Does                                         | Why It Matters                                                               |
+|---------------------------  |------------------------------------------------------|------------------------------------------------------------------------------|
+| ✅ **Structure Cleaning**   | Removes waters, ions, and ligands                    | Avoids docking to irrelevant or non-biological parts  |
+| ✅ **Gap filling**          |   Completes missing atoms and residues                | Docking tools require complete structures   |
+| ✅ **Hydrogen Addition**    | Adds hydrogens with protonation at pH             | Ensures accurate hydrogen bonding prediction                 |
+| ✅ **Clash Resolution**    | Fixes unfavorable sidechain conformations            | Reduces steric clashes that could disrupt key interactions              |
+| ✅ **Site Selection**      | Extracts chains by chain IDs or distance to ligand                 | Focuses on biologically meaningful interaction regions            |
+| ✅ **Charge Assignment**        | Assigns atomic charges and radii                   | Enables MD simulations requiring charge information   |
+| ✅ **PDBQT File Conversion**     | Generates PDBQT files                  | Provides required PDBQT format for AutoDock Vina             |
+
 
 ## Common Use Cases
 
 **dock-prep** excels in numerous research and drug discovery scenarios:
 
-### 💊 Structure-Based Drug Design
-Rapidly prepare multiple protein targets for virtual screening campaigns of compound libraries against therapeutic targets. Screen thousands of compounds with confidence that your protein preparation won't introduce inconsistencies.
-
-### 🧬 Protein-Protein Interaction Studies
-Extract specific binding interfaces between protein chains using the distance-based selection feature, allowing focused analysis of protein-protein interaction sites.
-
-### 🔬 Academic Research
-Enable students and researchers without computational chemistry backgrounds to quickly incorporate molecular docking into their experimental workflows without needing to master complex preparation techniques.
-
-### 🦠 Infectious Disease Research
-Efficiently prepare viral protein structures (like COVID-19 targets) that often contain challenging features such as missing residues and non-standard amino acids for rapid therapeutic development.
-
-### 🤖 High-Throughput Virtual Screening
-Integrate into automated pipelines to process hundreds of protein structures consistently for large-scale computational screening efforts, maintaining quality across the entire dataset.
-
-### 🧪 Experimental Structure Refinement
-Clean and optimize newly solved experimental structures (X-ray, Cryo-EM) that may contain artifacts or preparation issues before conducting molecular simulations.
-
-## Key Features
-
-**dock-prep** solves common protein preparation challenges by:
-
-- **Automating structure cleaning** - Removes unwanted water molecules, ions, and co-crystallized ligands
-- **Repairing missing atoms and residues** - Completes protein structures with accurate modeling
-- **Optimizing hydrogen placement** - Adds hydrogens at proper protonation states
-- **Resolving steric clashes** - Fixes unfavorable conformations and atomic overlaps
-- **Selecting binding sites** - Extracts specific protein chains by distance cutoffs or chain IDs
-- **Assigning proper charges** - Adds essential charge parameters needed for simulation
-- **Converting to PDBQT format** - Generates ready-to-dock files for AutoDock Vina
-
-By handling these technical steps automatically, dock-prep allows researchers to focus on scientific questions rather than the complexities of file preprocessing.
+#### 💊 Structure-Based Drug Design
+Process experimental structures into docking-ready models with optimized parameters for accurate virtual screening across diverse protein families.
+#### 🧬 Protein Trimming for Focused Docking
+Extract only relevant binding pockets through manual chain selection or distance-based trimming to improve docking accuracy and computational efficiency.
+#### 🔬🏢 Research Across Academia and Industry
+Simplify molecular docking for academic teaching and biotech R&D teams while reducing computational costs and accelerating drug discovery timelines.
+#### 🤖 High-Throughput Virtual Screening Pipelines
+Process hundreds of protein structures consistently for large-scale screening with standardized protocols that integrate with existing high-performance computing environments.
 
 ## Quick Start
 
