@@ -45,18 +45,18 @@ Process protein structures consistently for large-scale screening with standardi
 ## Quick Start
 
 ```bash
-# Install dependencies with conda
-conda create -n docking python=3.10 -y && conda activate docking
-conda install -c conda-forge numpy pdbfixer openmm biopython openbabel pdb2pqr -y
+# Create and activate conda environment
+conda create -n docking python=3.10 -y && activate docking
 
-# Install dock-prep
+# Install dependencies and dock-prep
+conda install -c conda-forge numpy pdbfixer openmm biopython openbabel pdb2pqr -y
 git clone https://github.com/ingcoder/dock-prep.git
-pip install -e dock-prep 
+pip install -e dock-prep
 
 # Install external tools
 chmod +x dock-prep/scripts/*.sh
 ./dock-prep/scripts/install_mgltools.sh
-./dock-prep/scripts/install_molprobity.sh
+./dock-prep/scripts/install_molprobity.sh #optional, but recommended
 
 # Prepare a protein from PDB ID
 dock-prep --pdb_id 2pgh --input_file dock-prep/dock_prep/examples/2pgh_original.pdb --verbose
