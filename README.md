@@ -11,7 +11,7 @@
 **Keywords**: protein structure preparation, molecular docking, AutoDock Vina, PDBQT conversion, computational drug discovery, PDB file processing
 
 ## What is dock-prep?
-**dock-prep** is a powerful, user-friendly tool that automates the preparation of protein structures for molecular docking with AutoDock Vina, streamlining PDB to PDBQT creation for computational drug discovery. Designed for researchers to quickly setup docking without the complex steps. 
+**dock-prep** is a powerful, user-friendly tool that automates the preparation of protein structures for molecular docking with AutoDock Vina, streamlining PDB to PDBQT creation for computational drug discovery. Designed for researchers to convert PDBs as they come from the Protein Databank to ready to use PDBQT files for AutoDock Vina docking, in a single line of code. 
 
 ## Why use dock-prep?
 **dock-prep** handles the entire pipeline of file preperation, reducing manual errors, ensuring consistency and saving time. 
@@ -40,7 +40,7 @@ Extract only relevant binding pockets through manual chain selection or distance
 #### 🔬🏢 Research Across Academia and Industry
 Simplify molecular docking for academic teaching and biotech R&D teams while reducing computational costs and accelerating drug discovery timelines.
 #### 🤖 High-Throughput Virtual Screening Pipelines
-Process hundreds of protein structures consistently for large-scale screening with standardized protocols that integrate with existing high-performance computing environments.
+Process protein structures consistently for large-scale screening with standardized protocols. 
 
 ## Quick Start
 
@@ -132,13 +132,13 @@ The tool generates a series of progressively refined files that document each st
 
 | File | Description | Purpose in Workflow |
 |------|-------------|---------------------|
-| `[pdb_id]_structure_cleaned.pdb` | Initial cleaned structure | Removes HETATM records (waters, ligands, ions) and prepares the protein for structural completion |
-| `[pdb_id]_structure_completed_final.pdb` | Structure with modeled residues | Fills in missing atoms and residues to create a complete protein model |
-| `[pdb_id]_structure_flipped_h_final.pdb` | Optimized with hydrogens | Contains MolProbity-optimized hydrogen positions and corrected side-chain orientations |
-| `[pdb_id]_structure_protonated.pqr` | Protonated structure | Includes atomic radii and charge parameters from PDB2PQR required for electrostatics |
-| `[pdb_id]_structure_docking.pdbqt` | Final docking-ready file | **Primary output file** with all parameters needed for AutoDock Vina docking simulations |
+| 📄`_structure_cleaned.pdb` | Initial cleaned structure | Removes HETATM records (waters, ligands, ions) and prepares the protein for structural completion |
+| 📄`_structure_completed_final.pdb` | Structure with modeled residues | Fills in missing atoms and residues to create a complete protein model |
+| 📄`_structure_flipped_h_final.pdb` | Optimized with hydrogens | Contains MolProbity-optimized hydrogen positions and corrected side-chain orientations |
+| 📄`_structure_protonated.pqr` | Protonated structure | Includes atomic radii and charge parameters from PDB2PQR required for electrostatics |
+| 📄`_structure_docking.pdbqt` | Final docking-ready file | **Primary output file** with all parameters needed for AutoDock Vina docking simulations |
 
-> **Note**: The `[pdb_id]_refined_docking.pdbqt` file is the primary output that should be used for docking simulations with AutoDock Vina. Intermediate files are preserved to allow inspection of each preparation step.
+> **Note**: The `docking.pdbqt` file is the primary output that should be used for docking simulations with AutoDock Vina. Intermediate files are preserved to allow inspection of each preparation step.
 
 #### File Formats Explained
 
