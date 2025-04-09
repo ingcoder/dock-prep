@@ -20,22 +20,22 @@ Dependencies:
 - MGLTools for PDBQT conversion
 
 Usage:
-    python run.py --pdb_id <PDB_ID> --input_file <input.pdb> --target_chains A,B
+    python run.py --file_prefix <PDB_ID> --input_file <input.pdb> --include_chains A,B --verbose
     
     or
     
-    python run.py --pdb_id <PDB_ID> --input_file <input.pdb> --ligand_chains X --verbose
+    python run.py --file_prefix <PDB_ID> --input_file <input.pdb> --reference_atom_chains C --verbose
 
 Options:
-    --pdb_id            PDB identifier (required)
-    --input_file        Path to input PDB file (required)
-    --target_chains     Comma-separated list of target protein chains (e.g., A,B)
-    --ligand_chains     Comma-separated list of ligand chains for identifying binding site
-    --hetatm_chains     Comma-separated list of HETATM chains for identifying binding site
-    --cutoff            Distance cutoff (Å) for identifying binding site residues (default: 5.0)
-    --ph                pH value for protonation (default: 7.4)
-    --output_dir        Directory for output files (default: results)
-    --verbose           Enable verbose output for detailed processing information
+    -file_prefix                    Prefix of the output files (required)
+    --input_file                 Path to input PDB file (required)
+    --include_chains             Comma-separated list of protein chains to be directly included in processing (e.g., A,B)
+    --reference_atom_chains      Comma-separated list of ligand chains used as reference to identify nearby protein chains
+    --reference_hetatm_chains    Comma-separated list of HETATM chains used as reference to identify nearby protein chains
+    --cutoff                     Distance cutoff (Å) for identifying binding site residues (default: 5.0)
+    --ph                         pH value for protonation (default: 7.4)
+    --output_dir                 Directory for output files (default: results)
+    --verbose                    Enable verbose output for detailed processing information
 
 Output:
     Multiple files representing different stages of the preparation process, including
@@ -59,15 +59,14 @@ def parse_arguments():
     )
     
     # Required parameter
-    parser.add_argument("--pdb_id", required=True, help="PDB identifier (e.g., 1JY7)")
     parser.add_argument("--input_file", required=True, help="Path to input PDB file")
     
     # Chain selection (mutually exclusive group)
     chain_group = parser.add_argument_group("Chain Selection Options (specify one)")
     selection = chain_group.add_mutually_exclusive_group()
-    selection.add_argument("--target_chains", help="Comma-separated list of target protein chains (e.g., A,B)")
-    selection.add_argument("--ligand_chains", help="Comma-separated list of ligand chains for identifying binding site")
-    selection.add_argument("--hetatm_chains", help="Comma-separated list of HETATM chains for identifying binding site")
+    selection.add_argument("--include_chains", help="Comma-separated list of protein chains to be directly included in processing (e.g., A,B)")
+    selection.add_argument("--reference_atom_chains", help="Comma-separated list of ligand chains used as reference to identify nearby protein chains")
+    selection.add_argument("--reference_hetatm_chains", help="Comma-separated list of HETATM chains used as reference to identify nearby protein chains")
     
     # Additional parameters
     parser.add_argument("--cutoff", type=float, default=5.0, help="Distance cutoff (Å) for identifying binding site residues")
@@ -75,6 +74,7 @@ def parse_arguments():
     parser.add_argument("--output_dir", default="results", help="Directory for output files")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output for detailed processing information")
     parser.add_argument("--skip_molprobity", action="store_true", help="Disable molprobity and side chain optimization")
+    parser.add_argument("--file_prefix", default="xx", help="Example PDB identifier (e.g., 1JY7)")
     
     args = parser.parse_args()
     
@@ -107,16 +107,18 @@ def main():
     # Parse command line arguments
     args = parse_arguments()
     VERBOSE = args.verbose
-    PDB_ID = args.pdb_id
+    FILE_PREFIX = args.file_prefix
     CUTOFF_ANGSTROM = args.cutoff
     RESULTS_FOLDER = args.output_dir
     SKIP_MOLPROBITY = args.skip_molprobity
     pH_VALUE = args.ph
 
     # Parse chain IDs from command line arguments
-    TARGET_CHAIN_IDS = args.target_chains.split(',') if args.target_chains else None
-    LIGAND_CHAIN_IDS = args.ligand_chains.split(',') if args.ligand_chains else None
-    HETATM_CHAIN_IDS = args.hetatm_chains.split(',') if args.hetatm_chains else None
+    INCLUDE_CHAIN_IDS = args.include_chains.split(',') if args.include_chains else None
+    REFERENCE_ATOM_CHAIN_IDS = args.reference_atom_chains.split(',') if args.reference_atom_chains else None
+    REFERENCE_HETATM_CHAIN_IDS = args.reference_hetatm_chains.split(',') if args.reference_hetatm_chains else None
+    print(f"REFERENCE_ATOM_CHAIN_IDS: {REFERENCE_ATOM_CHAIN_IDS}")
+    print(f"REFERENCE_HETATM_CHAIN_IDS: {REFERENCE_HETATM_CHAIN_IDS}")
 
     # Use a relative path based on the script location
     script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -134,21 +136,23 @@ def main():
     # Store all file paths
     INPUT_ORIGINAL_FILE = args.input_file
     file_paths['input'] = INPUT_ORIGINAL_FILE
-    CLEANED_FILE = os.path.join(results_folder, f"{PDB_ID}_0_structure_cleaned.pdb")
+    CLEANED_FILE = os.path.join(results_folder, f"{FILE_PREFIX}_0_structure_cleaned.pdb")
     file_paths['cleaned'] = CLEANED_FILE
-    SELECTED_CHAINS_FILE = os.path.join(results_folder, f"{PDB_ID}_0_structure_selected_chains.pdb")
+    CLEANED_FILE2 = os.path.join(results_folder, f"{FILE_PREFIX}_0_structure_cleaned2.pdb")
+    file_paths['cleane2d'] = CLEANED_FILE2
+    SELECTED_CHAINS_FILE = os.path.join(results_folder, f"{FILE_PREFIX}_0_structure_selected_chains.pdb")
     file_paths['binding_site'] = SELECTED_CHAINS_FILE
-    COMPLETED_TEMP_FILE = os.path.join(results_folder, f"{PDB_ID}_1_structure_completed_temp.pdb")
+    COMPLETED_TEMP_FILE = os.path.join(results_folder, f"{FILE_PREFIX}_1_structure_completed_temp.pdb")
     file_paths['temp_refined'] = COMPLETED_TEMP_FILE
-    COMPLETED_FINAL_FILE = os.path.join(results_folder, f"{PDB_ID}_2_structure_completed_final.pdb")
+    COMPLETED_FINAL_FILE = os.path.join(results_folder, f"{FILE_PREFIX}_2_structure_completed_final.pdb")
     file_paths['refined'] = COMPLETED_FINAL_FILE
-    FLIPPED_H_TEMP_FILE = os.path.join(results_folder, f"{PDB_ID}_3_structure_flipped_h_temp.pdb")
+    FLIPPED_H_TEMP_FILE = os.path.join(results_folder, f"{FILE_PREFIX}_3_structure_flipped_h_temp.pdb")
     file_paths['optimized'] = FLIPPED_H_TEMP_FILE
-    FLIPPED_H_FINAL_FILE = os.path.join(results_folder, f"{PDB_ID}_4_structure_flipped_h_final.pdb")
+    FLIPPED_H_FINAL_FILE = os.path.join(results_folder, f"{FILE_PREFIX}_4_structure_flipped_h_final.pdb")
     file_paths['edited'] = FLIPPED_H_FINAL_FILE
-    PROTONATED_PQR_FILE = os.path.join(results_folder, f"{PDB_ID}_5_structure_protonated.pqr")
+    PROTONATED_PQR_FILE = os.path.join(results_folder, f"{FILE_PREFIX}_5_structure_protonated.pqr")
     file_paths['protonated_pqr'] = PROTONATED_PQR_FILE
-    DOCKING_FILE = os.path.join(results_folder, f"{PDB_ID}_6_structure_docking.pdbqt")
+    DOCKING_FILE = os.path.join(results_folder, f"{FILE_PREFIX}_6_structure_docking.pdbqt")
     file_paths['docking'] = DOCKING_FILE
     # OUTPUT_FINAL_PDB_FILE = os.path.join(results_folder, f"{PDB_ID}_6_structure_pka_protonated.pdb")
     # file_paths['final'] = OUTPUT_FINAL_PDB_FILE
@@ -163,10 +167,10 @@ def main():
     add_separator("STEP 0: Settings")
     print(f"CONFIG_FILE: {CONFIG_FILE}")
     print(f"VERBOSE: {VERBOSE}")
-    print(f"PDB_ID: {PDB_ID}")
-    print(f"TARGET_CHAIN_IDS: {TARGET_CHAIN_IDS}")
-    print(f"LIGAND_CHAIN_IDS: {LIGAND_CHAIN_IDS}")
-    print(f"HETATM_CHAIN_IDS: {HETATM_CHAIN_IDS}")
+    print(f"PDB_ID: {FILE_PREFIX}")
+    print(f"INCLUDE_CHAIN_IDS: {INCLUDE_CHAIN_IDS}")
+    print(f"REFERENCE_ATOM_CHAIN_IDS: {REFERENCE_ATOM_CHAIN_IDS}")
+    print(f"REFERENCE_HETATM_CHAIN_IDS: {REFERENCE_HETATM_CHAIN_IDS}")
     print(f"CUTOFF_ANGSTROM: {CUTOFF_ANGSTROM}")
     print(f"pH_VALUE: {pH_VALUE}")
     print(f"RESULTS_FOLDER: {RESULTS_FOLDER}")
@@ -177,78 +181,104 @@ def main():
     # Step 1: Clean and return original structure as PDBFixer object
     #-----------------------------------------------------------------------
     VERBOSE and add_separator("STEP 1: LOADING AND CLEANING ORIGINAL STRUCTURE")
-    no_hetatm = True if HETATM_CHAIN_IDS is not None else False
-    fixer_original = load_clean_structure(INPUT_ORIGINAL_FILE, CLEANED_FILE, no_hetatm=no_hetatm, verbose=VERBOSE)
-    
+    skip_hetatm = True if REFERENCE_HETATM_CHAIN_IDS is None else False   
+    print(f"• Skip HETATM: {skip_hetatm}")
+
+    # Save clean structure and get original chain ids
+    original_chain_ids = save_clean_structure(INPUT_ORIGINAL_FILE, CLEANED_FILE, skip_hetatm=skip_hetatm, verbose=VERBOSE)
+
+    # Load structure as PDBFixer object
+    fixer_original = load_structure_as_pdbfixer(CLEANED_FILE)
+
+    # Map pdbfixer chain ids to chain indices and original chain ids
+    chain_map = map_pdbfixer_chains_to_original(fixer_original, original_chain_ids)
+
 
     #-----------------------------------------------------------------------
     # Step 2: Define chains to be extracted
     #-----------------------------------------------------------------------
-    VERBOSE and add_separator("STEP 2: EXTRACTING BINDING SITE")
+    VERBOSE and add_separator("STEP 2: DEFINING CHAINS TO BE EXTRACTED")
     # Three methods for chain selection, prioritized in this order:
-    # 1. Direct specification of target chains
-    # 2. Extraction based on proximity to provided HETATM chains
-    # 3. Extraction based on proximity to ligand chains
+    # 1. Direct inclusion: Explicitly include specified chains without proximity calculations
+    # 2. Reference-based (HETATM): Use specified HETATM chains as reference points to find nearby protein chains
+    # 3. Reference-based (atoms): Use specified ligand chains as reference points to find nearby protein chains
 
-    # Initialize selected chains as None
-    selected_chains = None
+    chains_to_extract = None
+    # Method 1: Directly include specified chains without proximity calculations
+    if INCLUDE_CHAIN_IDS is not None:
+        chains_to_extract = [(chain_id, "ATOM") for chain_id in INCLUDE_CHAIN_IDS]
+    # Method 2: Use HETATM chains as reference points
+    # (protein chains within cutoff distance of these reference HETATM chains will be selected)
+    elif REFERENCE_HETATM_CHAIN_IDS is not None:
+        chain_indices = get_chain_indices(chain_map, REFERENCE_HETATM_CHAIN_IDS, record_type="HETATM")
+        chains_to_extract = get_chains_to_extract(chain_map, chain_indices, fixer_original, CUTOFF_ANGSTROM,  filter_type='HETATM')
+        print(f"• Chains to extract NEAR HETATM CHAINS: {chains_to_extract}")
+    # Method 3: Use Atom chains as reference points
+    # (protein chains within cutoff distance of these reference ligand chains will be selected)
+    elif REFERENCE_ATOM_CHAIN_IDS is not None:
+        chain_indices = get_chain_indices(chain_map, REFERENCE_ATOM_CHAIN_IDS, record_type="ATOM")
+        chains_to_extract = get_chains_to_extract(chain_map, chain_indices, fixer_original, CUTOFF_ANGSTROM,  filter_type='ATOM')
+        print(f"• Chains to extract NEAR ATOM CHAINS: {chains_to_extract}")
 
-    # Method 1: Use directly specified target chains (simplest approach)
-    if TARGET_CHAIN_IDS is not None:
-        selected_chains = TARGET_CHAIN_IDS
 
-    # Method 2: Extract protein chains near specified HETATM chains
-    elif HETATM_CHAIN_IDS is not None:
-        selected_chains = get_selected_chains(INPUT_ORIGINAL_FILE, HETATM_CHAIN_IDS, fixer_original, CUTOFF_ANGSTROM)
-    
-    # Method 3: Extract protein chains near specified ligand chains
-    elif LIGAND_CHAIN_IDS is not None:
-        selected_chains = get_selected_chains(INPUT_ORIGINAL_FILE, LIGAND_CHAIN_IDS, fixer_original, CUTOFF_ANGSTROM)
-
-
-    #-----------------------------------------------------------------------
-    # Step 3: Extract chains
-    #-----------------------------------------------------------------------
-    # Extract only the identified target chains to a new PDB file
-    if selected_chains is not None:    
-        extract_chains_to_pdb(INPUT_ORIGINAL_FILE, SELECTED_CHAINS_FILE, selected_chains)
+    # #-----------------------------------------------------------------------
+    # # Step 3: Extract chains
+    # #-----------------------------------------------------------------------
+    VERBOSE and add_separator("STEP 3: EXTRACTING CHAINS TO PDB")
+    if chains_to_extract is not None:    
+        extract_chains_to_pdb(CLEANED_FILE, SELECTED_CHAINS_FILE, chains_to_extract)
     else:
         # Default fallback: If no chains could be identified, use the entire structure
-        SELECTED_CHAINS_FILE = INPUT_ORIGINAL_FILE
+        SELECTED_CHAINS_FILE = CLEANED_FILE
         VERBOSE and print("No ligand chains specified, using the entire structure")
     
 
     #-----------------------------------------------------------------------
     # Step 4: Count missing residues
     #-----------------------------------------------------------------------
-    VERBOSE and add_separator("STEP 3: REFINING STRUCTURE")
+    VERBOSE and add_separator("STEP 4: COUNTING MISSING RESIDUES")
     original_pdbfixer = PDBFixer(filename=INPUT_ORIGINAL_FILE)
     original_pdbfixer.findMissingResidues()
     # We use the original structure to count missing residues, to make sure we are not missing any residues
-    missing_residues_original_structure = get_missing_residues_by_chain(original_pdbfixer, selected_chains, verbose=VERBOSE)
+    missing_residues_original_structure = get_missing_residues_by_chain(original_pdbfixer, chains_to_extract, verbose=VERBOSE)
 
-
-    #-----------------------------------------------------------------------
-    # Step 5: Complete missing residues & atoms
-    #-----------------------------------------------------------------------
-    # From here on we use the selected chains 
-    pdb_fixer_object = load_structure_as_pdbfixer(SELECTED_CHAINS_FILE)
-
-    completed_refined_fixer, residue_count_before, atom_count_before, residue_count_after, atom_count_after = complete_missing_structure(
-        pdb_fixer_object, missing_residues_dict=missing_residues_original_structure, verbose=VERBOSE
-    )
-    save_structure_to_pdb(completed_refined_fixer, COMPLETED_TEMP_FILE, verbose=VERBOSE)
-    # PDBFixer renames chains. We restore it to the original chain IDs
-    restore_original_chain_ids(COMPLETED_TEMP_FILE, COMPLETED_FINAL_FILE, selected_chains, verbose=VERBOSE)
+    # From here on we use the selected chains. Clean structure again to exclude any remaining HETATM
+    save_clean_structure(SELECTED_CHAINS_FILE, CLEANED_FILE, skip_hetatm=True, verbose=VERBOSE)
     
+
+    if len(missing_residues_original_structure) > 0:
+        #-----------------------------------------------------------------------
+        # Step 5: Complete missing residues & atoms
+        #-----------------------------------------------------------------------
+        VERBOSE and add_separator("STEP 5: COMPLETE MISSING RESIDUES & ATOMS")
+
+        pdb_fixer_object = load_structure_as_pdbfixer(CLEANED_FILE)
+        
+        completed_refined_fixer, residue_count_before, atom_count_before, residue_count_after, atom_count_after = complete_missing_structure(
+            pdb_fixer_object, missing_residues_dict=missing_residues_original_structure, verbose=VERBOSE
+        )
+
+        #-----------------------------------------------------------------------
+        # Step 6: SAVE FINAL (COMPLETE) STRUCTURE
+        #-----------------------------------------------------------------------
+        VERBOSE and add_separator("STEP 6: SAVE FINAL (COMPLETE) STRUCTURE")
+        save_fixer_structure_to_pdb(completed_refined_fixer, COMPLETED_TEMP_FILE, verbose=VERBOSE)
+
+        # PDBFixer renames chains. We restore it to the original chain IDs
+        restore_original_chain_ids(COMPLETED_TEMP_FILE, COMPLETED_FINAL_FILE, chains_to_extract, verbose=VERBOSE)
+
+        print(f"\nStructure completion statistics:")
+        print(f"  {'Description':<30} {'Before':<10} {'After':<10}")
+        print(f"  {'-'*30} {'-'*10} {'-'*10}")
+        print(f"  {'Residue count':<30} {residue_count_before:<10} {residue_count_after:<10}")
+        print(f"  {'Atom count':<30} {atom_count_before:<10} {atom_count_after:<10}")
+        print(f"  {'Added atoms':<30} {'':<10} {atom_count_after - atom_count_before:<10}")
+
+    else:
+        VERBOSE and add_separator("STEP 5: SKIPPING STRUCTURE COMPLETION")
+        restore_original_chain_ids(CLEANED_FILE, COMPLETED_FINAL_FILE, chains_to_extract, verbose=VERBOSE)
+
    
-    print(f"\nStructure completion statistics:")
-    # Using string formatting with fixed width fields
-    print(f"  {'Description':<30} {'Before':<10} {'After':<10}")
-    print(f"  {'-'*30} {'-'*10} {'-'*10}")
-    print(f"  {'Residue count':<30} {residue_count_before:<10} {residue_count_after:<10}")
-    print(f"  {'Atom count':<30} {atom_count_before:<10} {atom_count_after:<10}")
-    print(f"  {'Added atoms':<30} {'':<10} {atom_count_after - atom_count_before:<10}")
 
     if SKIP_MOLPROBITY:
         #-----------------------------------------------------------------------
@@ -256,20 +286,20 @@ def main():
         #-----------------------------------------------------------------------
         # We skip molprobity and side chain optimization and instead use pdb2pqr to protonate the structure. 
         # Then we use MGLTools to create the PDBQT file.
-        VERBOSE and add_separator("STEP 4: SKIPPING MOLPROBITY")
-        VERBOSE and add_separator("STEP 5: PROTONATION WITH PDB2PQR")
+        VERBOSE and add_separator("STEP 7: SKIPPING MOLPROBITY")
+        VERBOSE and add_separator("STEP 8: PROTONATION WITH PDB2PQR")
         run_program("PDB2PQR", COMPLETED_FINAL_FILE, PROTONATED_PQR_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
 
         #-----------------------------------------------------------------------
         # Step 7: Create PDBQT file for AutoDock Vina
         #-----------------------------------------------------------------------
-        VERBOSE and add_separator("STEP 6: CREATING PDBQT FILE FOR AutoDock Vina")  
+        VERBOSE and add_separator("STEP 8: CREATING PDBQT FILE FOR AutoDock Vina")  
         run_program("MGLTools", PROTONATED_PQR_FILE, DOCKING_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
     else:
         #-----------------------------------------------------------------------
         # Step 6: Optimize structure with MolProbity
         #-----------------------------------------------------------------------
-        VERBOSE and add_separator("STEP 4: OPTIMIZING STRUCTURE FOR DOCKING")
+        VERBOSE and add_separator("STEP 7: OPTIMIZING STRUCTURE FOR DOCKING")
         run_program("MolProbity", COMPLETED_FINAL_FILE, FLIPPED_H_TEMP_FILE, verbose=VERBOSE, pH_value=pH_VALUE, config_file=CONFIG_FILE)
 
         #-----------------------------------------------------------------------
@@ -292,17 +322,16 @@ def main():
 
     
     # Print output files summary in non-verbose mode
-    if not VERBOSE:
-        print("\nOutput files:")
-        # Using string formatting with fixed width fields for consistent columns
-        print(f"  {'File Type':<30} {'Path':<50}")
-        print(f"  {'-'*30} {'-'*50}")
-        print(f"  {'Binding site structure':<30} {os.path.relpath(SELECTED_CHAINS_FILE):<50}")
-        print(f"  {'Refined structure':<30} {os.path.relpath(COMPLETED_FINAL_FILE):<50}")
-        print(f"  {'Optimized structure':<30} {os.path.relpath(FLIPPED_H_FINAL_FILE):<50}")
-        print(f"  {'Final PDBQT for docking':<30} {os.path.relpath(DOCKING_FILE):<50}")
-        print("\n✅ Structure preparation completed successfully!")
-    
+    print("\nOutput files:")
+    # Using string formatting with fixed width fields for consistent columns
+    print(f"  {'File Type':<30} {'Path':<50}")
+    print(f"  {'-'*30} {'-'*50}")
+    print(f"  {'Binding site structure':<30} {os.path.relpath(SELECTED_CHAINS_FILE):<50}")
+    print(f"  {'Refined structure':<30} {os.path.relpath(COMPLETED_FINAL_FILE):<50}")
+    print(f"  {'Optimized structure':<30} {os.path.relpath(FLIPPED_H_FINAL_FILE):<50}")
+    print(f"  {'Final PDBQT for docking':<30} {os.path.relpath(DOCKING_FILE):<50}")
+    print("\n✅ Structure preparation completed successfully!")
+
 
 if __name__ == "__main__":
     main()

@@ -25,7 +25,7 @@ def _check_if_file_exists(input_path):
             print(f"  - {file}")
         raise FileNotFoundError(f"Input file not found: {input_path}")
     else:
-        print(f"✅ Input file exists: {input_path}")
+        print(f"• Input file exists: {input_path}")
         print(f"File size: {os.path.getsize(input_path)} bytes")
         return True
 
@@ -82,7 +82,7 @@ def _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path,
             input_dir = os.path.dirname(abs_input_path)
             input_filename = os.path.basename(abs_input_path)
             output_filename = os.path.basename(abs_output_path)
-            print(f"input_dir: {input_dir}")
+            print(f"• input_dir: {input_dir}")
             
             # Change working directory
             if input_dir:
@@ -100,7 +100,17 @@ def _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path,
             # verbose and print(f"Updated command: {command}")
         
         # Run the command
-        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=300, check=True)
+        # result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=300)
+        try:
+            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=300, check=True)
+        except subprocess.CalledProcessError as e:
+            print(e.stdout)
+            # For MolProbity, continue anyway if the output file exists
+            if tool_name == "MolProbity" and os.path.exists(abs_output_path):
+                print(f"Warning: {tool_name} returned non-zero exit code {e.returncode} but output file was created")
+                return True
+            else:
+                raise
         
         # # Print command output if verbose
         # if verbose and result.stdout:
@@ -109,8 +119,8 @@ def _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path,
         
         # Check if the output file was created
         if os.path.exists(abs_output_path):
-            print(f"Successfully created output file: {abs_output_path}")
-            print(f"File size: {os.path.getsize(abs_output_path)} bytes")
+            print(f"✅Successfully created output file: {abs_output_path}")
+            print(f"• File size: {os.path.getsize(abs_output_path)} bytes")
             return True
         else:
             print("Error: Output file was not created despite successful command execution")

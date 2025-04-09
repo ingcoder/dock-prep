@@ -30,6 +30,7 @@ try:
     from openmm.app import PDBFile
     from openmm import unit
     from Bio import PDB
+    from Bio.PDB.PDBParser import PDBParser
 except ImportError as e:
     print(f"ERROR: Missing dependency - {e}")
     print("\nPlease install the required dependencies:")
@@ -60,7 +61,9 @@ def extract_chains_to_pdb(input_filepath, output_filepath, target_chains=None):
         for line in fin:
             if line.startswith("ATOM") or line.startswith("HETATM"):
                 chain_id = line[21]
-                if chain_id in target_chains:
+                record_type = line[0:6].strip()
+                chain_search_key = (chain_id, record_type)
+                if chain_search_key in target_chains:
                     fout.write(line)
             elif line.startswith("TER") and len(line) > 21:
                 chain_id = line[21]
@@ -72,7 +75,7 @@ def extract_chains_to_pdb(input_filepath, output_filepath, target_chains=None):
     rel_path = os.path.relpath(output_filepath)
     print(f"✅ Filtered PDB saved to {rel_path} containing chains {target_chains}")
 
-def save_structure_to_pdb(pdb_structure, output_filepath, verbose=True):
+def save_fixer_structure_to_pdb(pdb_structure, output_filepath, verbose=True):
     """Saves PDBFixer structure to a PDB file."""
     with open(output_filepath, 'w') as f:
         PDBFile.writeFile(pdb_structure.topology, pdb_structure.positions, f)
@@ -92,17 +95,17 @@ def restore_original_chain_ids(input_filepath, output_filepath, target_chains, v
     # Parse the input PDB file using Biopython's PDB parser
     parser = PDB.PDBParser(QUIET=True)
     structure = parser.get_structure("orig", input_filepath)
-    
-    # Get all chain IDs from the input file by iterating through all models and chains
-    input_file_chain_ids = [chain.id for model in structure for chain in model]
-    
+    current_chain_ids = [chain.id for model in structure for chain in model]
+
     # If no target chains were specified, use all chains from the input file
     if target_chains is None:
-        target_chains = input_file_chain_ids
-    
+        target_chains = current_chain_ids
+    else:
+        target_chains = [chain[0] for chain in target_chains]
+
     # Create a mapping between the chains in the input file and the target chains
     # This assumes chains are in the same order in both lists (PDBFixer typically preserves order)
-    chain_mapping = {orig_chain: new_chain for orig_chain, new_chain in zip(input_file_chain_ids, target_chains)}
+    chain_mapping = {current_chain: correct_chain for current_chain, correct_chain in zip(current_chain_ids, target_chains)}
     verbose and print(f"• Chain mapping: {chain_mapping}")
     
     with open(input_filepath, 'r') as fin, open(output_filepath, 'w') as fout:
@@ -110,11 +113,10 @@ def restore_original_chain_ids(input_filepath, output_filepath, target_chains, v
              # Process only ATOM and HETATM lines which contain atom coordinates
              if line.startswith("ATOM") or line.startswith("HETATM"):
                  # In PDB format, the chain ID is at position 21 (0-indexed)
-                 new_chain = line[21]
-                 # Only modify the chain ID if it has a mapping
-                 if new_chain in chain_mapping:
+                 chain_id = line[21:22]
+                 if chain_id in chain_mapping:
                      # Get the target chain ID from the mapping
-                     fixed_chain = chain_mapping[new_chain]
+                     fixed_chain = chain_mapping[chain_id]
                      # Construct a new line by replacing just the chain ID character
                      # This preserves all other information in the line
                      line = line[:21] + fixed_chain + line[22:]
@@ -128,7 +130,7 @@ def restore_original_chain_ids(input_filepath, output_filepath, target_chains, v
 #                     STRUCTURE LOADING AND CLEANING
 #==============================================================================
 
-def load_clean_structure(input_file, output_file, no_hetatm=True, verbose=True):
+def save_clean_structure(input_file, output_file, skip_hetatm=True, verbose=True):
     """Loads PDB file, removes heteroatoms, and returns a PDBFixer object."""
     # Validate input file
     if not os.path.exists(input_file):
@@ -137,59 +139,58 @@ def load_clean_structure(input_file, output_file, no_hetatm=True, verbose=True):
         # Option 1: Get path relative to current working directory
         rel_path = os.path.relpath(input_file)
         print("\nPath to PDB file:", rel_path)
-        
-        # Other options (commented out):
-        # Option 2: Just the filename without the directory path
-        # print("• Filename:", os.path.basename(pdb_filepath))
-        
-        # Option 3: Relative to a specific directory
-        # print("• Path relative to results folder:", os.path.relpath(pdb_filepath, 'results'))
-        
-        # Option 4: Shorten the path by showing ~ for home directory
-        # home = os.path.expanduser("~")
-        # if pdb_filepath.startswith(home):
-        #     shortened_path = pdb_filepath.replace(home, "~", 1)
-        #     print("• Path to PDB file:", shortened_path)
-        # else:
-        #     print("• Path to PDB file:", pdb_filepath)
-    
-    # # Prepare output filename
-    # base, ext = os.path.splitext(pdb_filepath)
-    # basename = os.path.basename(base)
-    # print(f"• Base: {basename}")
-    # print(os.getcwd)
-    # print(f"• Ext: {ext}")
-    # cleaned_filepath = f'{base}_clean{ext}'
     
     try:
-        # Step 1: Read and filter PDB content
+        # Step 1: Read PDB content
         with open(input_file, 'r') as f:
             lines = f.readlines()
 
         # Step 2: Process lines and filter HETATM records
         cleaned_lines = []
+        chains = []
+        chains_seen = set()
+        # Skip water molecules only and keep other HETATM
+        water_molecules = ["HOH", "WAT", "H2O", "SOL", "DOD"]
+
         for line in lines:
             if line.startswith("HETATM"):
-                if no_hetatm:  
+                if skip_hetatm:  
                     # Skip all HETATM lines
                     continue
                 else:
-                    # Skip water molecules only
-                    water_molecules = ["HOH", "WAT", "H2O", "SOL", "DOD"]
+                    # If not skipping all HETATM, still skip water molecules
                     if any(water in line for water in water_molecules):
                         continue
+            
             cleaned_lines.append(line)
-    
+            _count_chains(line, chains, chains_seen)
+        
         # Step 3: Write cleaned content to file
         cleaned_pdb_text = "".join(cleaned_lines)
         with open(output_file, 'w') as f:
             f.write(cleaned_pdb_text)
 
-        return load_structure_as_pdbfixer(input_file)
+        if verbose:
+            rel_path = os.path.relpath(output_file)
+            print(f"✅ Cleaned PDB saved to {rel_path} with chains: {chains}")
+            
+        return chains
+
     except Exception as e:
         print(f"❌ Error processing PDB file: {e}")
         raise
-        
+
+def _count_chains(line, chains, chains_seen):
+    # Track chain IDs for atoms
+    if line.startswith("ATOM") or line.startswith("HETATM"):
+        chain_id = line[21:22]
+        if chain_id not in chains_seen:
+            chains.append(chain_id)
+            chains_seen.add(chain_id)
+
+    # Reset chains_seen when a TER record is encountered
+    elif line.startswith("TER"):
+        chains_seen.clear()
 
 def load_structure_as_pdbfixer(input_file):
         # Step 4: Create and return PDBFixer object
@@ -297,11 +298,14 @@ def get_missing_residues_by_chain(pdb_fixer, target_chains, verbose=True):
 
     # Step 3: Print summary report of missing residues
     if verbose:
-        print(f"\nMissing residues by target chains:")
-        print(f"\n{'Chain ID':<10} {'Missing residues':<15} {'Position':<10}")
-        print(f"{'-'*10} {'-'*15} {'-'*10}")
-        for summary in summaries:
-            print(f"{summary['chain_id']:<10} {summary['missing_residues_count']:<15} {summary['residue_index']:<10}")
+        if len(missing_residues_in_target_chains) > 0:
+            print(f"\nMissing residues by target chains:")
+            print(f"\n{'Chain ID':<10} {'Missing residues':<15} {'Position':<10}")
+            print(f"{'-'*10} {'-'*15} {'-'*10}")
+            for summary in summaries:
+                print(f"{summary['chain_id']:<10} {summary['missing_residues_count']:<15} {summary['residue_index']:<10}")
+        else:
+            print("No missing residues found in target chains")
 
     return missing_residues_in_target_chains
 
@@ -309,47 +313,151 @@ def get_missing_residues_by_chain(pdb_fixer, target_chains, verbose=True):
 #                      CHAIN AND RESIDUE ANALYSIS
 #==============================================================================
 
-def get_selected_chains(input_file, selection, fixer_object, cutoff):
+def get_chain_indices(chain_map, chain_ids, record_type):
+    if isinstance(chain_ids, str):
+        result = [chain_ids]
+    else:
+        # Get all valid indices as a list
+        result = [chain_map.get((chain_id, record_type)).get('fixer_index') 
+                for chain_id in chain_ids 
+                if (chain_id, record_type) in chain_map]
+    print(f"• Chain indices: {result}")
+    return result
+
+
+def get_chains_to_extract(chain_map, chain_indices, fixer_object, cutoff, filter_type=None):
     selected_chains = None
 
-        # Map the original chain IDs to the potentially new IDs after cleaning
-    chain_ids = map_orig_to_new_chain(input_file, selection)
+    # Map the original chain IDs to the potentially new IDs after cleaning
+    # chain_ids = map_orig_to_fixer_chain_ids(input_file, selection)
+    # print(f"• Chain ids: {chain_ids}")
+    
     # Identify atoms belonging to the specified HETATM chains
-    ligand_atoms = get_ligand_atoms(fixer_object, chain_ids) 
+    ligand_atoms = get_ligand_atoms(fixer_object, chain_indices, filter_type) 
+  
     # Find protein residues within the cutoff distance of the HETATM atoms
     residues_near_ligand = get_residues_near_ligand(
         fixer_object, ligand_atoms, distance_threshold=cutoff
     )
+
+    print(f"• Residues near ligand: {len(residues_near_ligand)}")
+
     # Determine which chains contain the identified nearby residues
-    selected_chains = get_chains_near_ligand(fixer_object, residues_near_ligand, chain_ids)
+    selected_chain_indices = get_chains_near_ligand(fixer_object, residues_near_ligand, chain_indices)
 
-    return selected_chains
+    # Reverse map fixer chain index to fixer chain id. 
+    selected_chain_ids = [(k[0], k[1]) for k, v in chain_map.items() if v.get('fixer_index') in selected_chain_indices]
+
+    print(f"• List of chain indices near ligand: {sorted(selected_chain_ids)}")  
+
+    return selected_chain_ids
 
 
-def map_orig_to_new_chain(input_file, ligand_chain_ids, verbose=True):
-    """Maps original chain IDs to PDBFixer internal representation."""
+def count_chains_biopython(input_file):
+      # Use Biopython's PDB parser for validation
     parser = PDB.PDBParser(QUIET=True)
-    structure = parser.get_structure("orig", input_file)
-    original_chain_ids = [chain.id for model in structure for chain in model]
+    structure = parser.get_structure("structure", input_file)
+    # Validate against Biopython's model
+    print("\nBiopython structure analysis:")
+    for model in structure:
+        for chain in model:
+            chain_id = chain.id
+            standard_residues = 0
+            nonstandard_residues = 0
+            
+            for residue in chain:
+                if residue.id[0] == ' ':
+                    standard_residues += 1
+                else:
+                    nonstandard_residues += 1
+                    
+            print(f"Chain {chain_id}: {standard_residues} standard, {nonstandard_residues} non-standard residues")
+
+
+def get_original_chain_ids(input_file):
+    """Extract chain IDs directly from PDB file, preserving duplicates."""
+    chain_ids = []
+    seen_chains = set()
+    
+    # Track counts for debugging
+    atom_chains = set()
+    hetatm_chains = set()
+    ter_count = 0
+    
+    with open(input_file, 'r') as f:
+        for line in f:
+            if line.startswith("ATOM"):
+                chain_id = line[21:22].strip()  # Chain ID is at position 21 (0-indexed)
+                atom_chains.add(chain_id)
+                
+                # Only add if it's a new chain (not seen since the last one)
+                if chain_id not in seen_chains:
+                    chain_ids.append(chain_id)
+                    seen_chains.add(chain_id)
+                
+            elif line.startswith("HETATM"):
+                chain_id = line[21:22].strip()
+                hetatm_chains.add(chain_id)
+                
+                # Only add if it's a new chain (not seen since the last one)
+                if chain_id not in seen_chains:
+                    chain_ids.append(chain_id)
+                    seen_chains.add(chain_id)
+                    
+            # Clear seen_chains when we encounter a TER record
+            # This ensures that if the same chain ID appears again, after a TER record, it will be added to the list again
+            elif line.startswith("TER"):
+                ter_count += 1
+                seen_chains.clear()
+    
+    # Print debugging information
+    print("\n=== PDB Chain Analysis ===")
+    print(f"ATOM chains: {sorted(atom_chains)}")
+    print(f"HETATM chains: {sorted(hetatm_chains)}")
+    print(f"TER records: {ter_count}")
+    print(f"Chain IDs extracted (with duplicates from TER): {chain_ids}")
+    print(f"Unique chain IDs: {sorted(set(chain_ids))}")
+    
+    return chain_ids
+
+
+def get_fixer_chain_ids(input_file):
+    """Extract chain IDs directly from PDBFixer object."""
+    fixer = PDBFixer(filename=input_file)
+    fixer_chain_ids = [chain.id for chain in fixer.topology.chains()]
+    return fixer, fixer_chain_ids
+
+
+def map_orig_to_fixer_chain_ids(input_file, ligand_chain_ids, verbose=True):
+    """Maps original chain IDs to PDBFixer internal representation."""
+    # parser = PDB.PDBParser(QUIET=True)
+    # structure = parser.get_structure("orig", input_file)
+    # original_chain_ids = [chain.id for model in structure for chain in model]
+    original_chain_ids = get_original_chain_ids(input_file)
     verbose and print(f"• Original chain IDs: {original_chain_ids}")
 
-    fixer = PDBFixer(filename=input_file)
-    chain_map = {orig_chain.id: new_chain for orig_chain, new_chain in zip(fixer.topology.chains(), original_chain_ids)}
+    fixer, fixer_chain_ids = get_fixer_chain_ids(input_file)
+    print(f"• Fixer chain ids: {fixer_chain_ids}")
+    
+    chain_map = {orig_chain.id: new_chain.index for orig_chain, new_chain in zip(fixer.topology.chains(), original_chain_ids)}
+    print(f"• Chain map: {chain_map}")
     # verbose and print(f"• Map PDBFixer:OriginalPDB Chain Ids. {chain_map}")
     ligand_chain_ids = [chain_map[orig_id] for orig_id in ligand_chain_ids]
     
     verbose and print(f"• Ligand chain ids: {ligand_chain_ids}")
     return ligand_chain_ids
 
-def get_ligand_atoms(fixer, ligand_chain_ids):
+def get_ligand_atoms(fixer, chain_indices, filter_type=None):
     """Gets atoms from specified ligand chains."""
+
     ligand_atoms = []
     for chain in fixer.topology.chains():
-        if chain.id in ligand_chain_ids:
+        if chain.index in chain_indices:
             for residue in chain.residues():
                 for atom in residue.atoms():
                     ligand_atoms.append(atom)
     return ligand_atoms
+
 
 def get_residues_near_ligand(fixer, ligand_atoms, distance_threshold):
     """Finds residues near ligand based on distance threshold."""
@@ -374,15 +482,37 @@ def get_residues_near_ligand(fixer, ligand_atoms, distance_threshold):
                     
     return near_residues
 
-def get_chains_near_ligand(fixer, near_residues, ligand_chain_ids, verbose=True):
+def get_chains_near_ligand(fixer, near_residues, chain_indices, verbose=True):
     """Gets chain IDs for residues near ligand, excluding ligand chains."""
     chain_ids = set()
     for chain in fixer.topology.chains():
-        if chain.id in ligand_chain_ids:
+        if chain.index in chain_indices:
             continue
         for residue in chain.residues():
             if residue in near_residues:
-                chain_ids.add(chain.id)
+                chain_ids.add(chain.index)
                 break  # Found at least one residue in this chain; move to the next chain.
-    verbose and print(f"• Chains forming the target site: {sorted(chain_ids)}")  
+    
     return sorted(set(chain_ids))
+
+def map_pdbfixer_chains_to_original(pdbfixer_obj, original_chain_ids):
+    """
+    Simply counts the number of chains in a PDBFixer object.
+    """
+    std_residues = set([
+        'ALA', 'ARG', 'ASN', 'ASP', 'CYS', 'GLN', 'GLU', 'GLY', 'HIS', 'ILE', 
+        'LEU', 'LYS', 'MET', 'PHE', 'PRO', 'SER', 'THR', 'TRP', 'TYR', 'VAL'
+    ])
+
+    chain_count = 0
+    chain_ids = {}
+    for chain in pdbfixer_obj.topology.chains():
+        
+        if chain._residues[0].name in std_residues:
+            chain_ids[(chain.id, 'ATOM')] = {'fixer_index':chain_count, 'original_chain_id': original_chain_ids[chain_count]}
+        else:
+            chain_ids[(chain.id, 'HETATM')] = {'fixer_index':chain_count, 'original_chain_id': original_chain_ids[chain_count]}
+        chain_count += 1
+
+    print(f"PDBFixer contains {chain_count} chains")
+    return chain_ids
