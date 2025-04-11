@@ -25,8 +25,6 @@ def _check_if_file_exists(input_path):
             print(f"  - {file}")
         raise FileNotFoundError(f"Input file not found: {input_path}")
     else:
-        print(f"• Input file exists: {input_path}")
-        print(f"File size: {os.path.getsize(input_path)} bytes")
         return True
 
 def get_conda_env():

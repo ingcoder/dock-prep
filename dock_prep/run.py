@@ -74,7 +74,7 @@ def parse_arguments():
     parser.add_argument("--output_dir", default="results", help="Directory for output files")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output for detailed processing information")
     parser.add_argument("--skip_molprobity", action="store_true", help="Disable molprobity and side chain optimization")
-    parser.add_argument("--file_prefix", default="xx", help="Example PDB identifier (e.g., 1JY7)")
+    parser.add_argument("--file_prefix", default="prefix", help="Example PDB identifier (e.g., 1JY7)")
     
     args = parser.parse_args()
     
@@ -138,8 +138,6 @@ def main():
     file_paths['input'] = INPUT_ORIGINAL_FILE
     CLEANED_FILE = os.path.join(results_folder, f"{FILE_PREFIX}_0_structure_cleaned.pdb")
     file_paths['cleaned'] = CLEANED_FILE
-    CLEANED_FILE2 = os.path.join(results_folder, f"{FILE_PREFIX}_0_structure_cleaned2.pdb")
-    file_paths['cleane2d'] = CLEANED_FILE2
     SELECTED_CHAINS_FILE = os.path.join(results_folder, f"{FILE_PREFIX}_0_structure_selected_chains.pdb")
     file_paths['binding_site'] = SELECTED_CHAINS_FILE
     COMPLETED_TEMP_FILE = os.path.join(results_folder, f"{FILE_PREFIX}_1_structure_completed_temp.pdb")
@@ -239,6 +237,7 @@ def main():
     VERBOSE and add_separator("STEP 4: COUNTING MISSING RESIDUES")
     original_pdbfixer = PDBFixer(filename=INPUT_ORIGINAL_FILE)
     original_pdbfixer.findMissingResidues()
+
     # We use the original structure to count missing residues, to make sure we are not missing any residues
     missing_residues_original_structure = get_missing_residues_by_chain(original_pdbfixer, chains_to_extract, verbose=VERBOSE)
 

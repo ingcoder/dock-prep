@@ -51,6 +51,53 @@ def add_separator(message):
     print(message)
     print("="*80)
 
+def validate_pdb_file(input_file, verbose=True):
+    """
+    Validates if the input file is a PDB file and checks for SEQRES records.
+    """
+    # Check if file exists
+    if not os.path.exists(input_file):
+        print(f"Error: File not found: {input_file}")
+        sys.exit(1)
+    
+    # Check file extension
+    file_ext = os.path.splitext(input_file)[1].lower()
+    if not file_ext.startswith('.pdb'):
+        print(f"Error: Unsupported file format: {file_ext}. Only PDB formats (.pdb, .pdbqt, etc.) are supported.")
+        sys.exit(1)
+    
+    # Check if file contains valid PDB format by looking for HEADER/ATOM/HETATM records
+    has_pdb_records = False
+    has_seqres = False
+    
+    try:
+        with open(input_file, 'r') as f:
+            for line in f:
+                # Check for PDB record identifiers (HEADER, ATOM, HETATM)
+                if line.startswith(("HEADER", "ATOM", "HETATM")):
+                    has_pdb_records = True
+                # Check for SEQRES records
+                if line.startswith("SEQRES"):
+                    has_seqres = True
+                    if verbose:
+                        print("✅ SEQRES records found in PDB file")
+                    break
+    except UnicodeDecodeError:
+        # If we can't read the file as text, it's not a valid PDB
+        print("Error: File is not a valid text-based PDB file")
+        sys.exit(1)
+    
+    if not has_pdb_records:
+        print("Error: File does not appear to be a valid PDB format. No PDB record identifiers found.")
+        sys.exit(1)
+    
+    if not has_seqres and verbose:
+        print("❗ Warning: No SEQRES records found in PDB file.")
+        print("Missing residues detection may be limited. The structure preparation will")
+        print("continue, but missing residues might not be properly identified.")
+    
+    return has_pdb_records, has_seqres
+
 #==============================================================================
 #                            FILE OPERATIONS
 #==============================================================================
@@ -130,15 +177,47 @@ def restore_original_chain_ids(input_filepath, output_filepath, target_chains, v
 #                     STRUCTURE LOADING AND CLEANING
 #==============================================================================
 
+# def load_file_as_pdb(input_file):
+#     """Loads a PDB file and returns a PDBFixer object."""
+#     # Validate the input file is a valid PDB file
+#     validate_pdb_file(input_file)
+    
+#     # Load the structure using Biopython's PDB parser
+#     try:
+#         parser = PDB.PDBParser(QUIET=True)
+#         structure = parser.get_structure("structure", input_file)
+#         return structure
+#     except Exception as e:
+#         print(f"Error: Failed to load PDB file: {e}")
+#         sys.exit(1)
+
+def load_structure_as_pdbfixer(input_file):
+    """
+    Creates and returns a PDBFixer object from a PDB file.
+    
+    Parameters:
+    -----------
+    input_file : str
+        Path to the input PDB file
+        
+    Returns:
+    --------
+    PDBFixer
+        PDBFixer object loaded with the input structure
+    """
+    
+    # Create and return PDBFixer object
+    try:
+        fixer = PDBFixer(filename=input_file)
+        return fixer
+    except Exception as e:
+        print(f"Error: Failed to process PDB file with PDBFixer: {e}")
+        sys.exit(1)
+
 def save_clean_structure(input_file, output_file, skip_hetatm=True, verbose=True):
     """Loads PDB file, removes heteroatoms, and returns a PDBFixer object."""
-    # Validate input file
-    if not os.path.exists(input_file):
-        raise FileNotFoundError(f"File not found. {input_file}")
-    if verbose:
-        # Option 1: Get path relative to current working directory
-        rel_path = os.path.relpath(input_file)
-        print("\nPath to PDB file:", rel_path)
+    # Validate the input file is a valid PDB file and check for SEQRES records
+    validate_pdb_file(input_file, verbose=verbose)
     
     try:
         # Step 1: Read PDB content
@@ -177,29 +256,18 @@ def save_clean_structure(input_file, output_file, skip_hetatm=True, verbose=True
         return chains
 
     except Exception as e:
-        print(f"❌ Error processing PDB file: {e}")
-        raise
+        print(f"Error: Failed to clean PDB file: {e}")
+        sys.exit(1)
 
 def _count_chains(line, chains, chains_seen):
-    # Track chain IDs for atoms
     if line.startswith("ATOM") or line.startswith("HETATM"):
         chain_id = line[21:22]
         if chain_id not in chains_seen:
             chains.append(chain_id)
             chains_seen.add(chain_id)
-
     # Reset chains_seen when a TER record is encountered
     elif line.startswith("TER"):
         chains_seen.clear()
-
-def load_structure_as_pdbfixer(input_file):
-        # Step 4: Create and return PDBFixer object
-    try:
-        fixer = PDBFixer(filename=input_file)
-        return fixer
-    except Exception as e:
-        print(f"❌ Error processing PDB file: {e}")
-        raise
 
 def count_residues(fixer, verbose=True):
     """Counts residues and atoms in a PDBFixer object."""
@@ -264,18 +332,20 @@ def complete_missing_structure(pdb_fixer, missing_residues_dict=None, verbose=Tr
 
     return pdb_fixer, residue_count_before, atom_count_before, residue_count_after, atom_count_after
 
-def get_missing_residues_by_chain(pdb_fixer, target_chains, verbose=True):
+def get_missing_residues_by_chain(pdb_fixer, selected_chains, verbose=True):
     """Gets missing residues in specified chains."""
     summaries = []
     missing_residues_in_target_chains = {}
+    selected_chains_ids = [chain[0] for chain in selected_chains]
+
+    print(f"• Selected chains: {selected_chains_ids}")
     
     # Step 1: Create a mapping from chain indices (int) to chain objects
     chain_index_map = {}
     for chain in pdb_fixer.topology.chains():
-        if target_chains is not None:
-            if chain.id in target_chains:
+        if selected_chains_ids is not None:
+            if chain.id in selected_chains_ids:
                 # verbose and print('target chains', target_chains, chain.id)
-                # verbose and print(f"• Chain {chain.id} is in target chains")
                 chain_index_map[chain.index] = chain
         else: # If no target chains are specified, include all chains
             chain_index_map[chain.index] = chain
@@ -296,10 +366,13 @@ def get_missing_residues_by_chain(pdb_fixer, target_chains, verbose=True):
                 summaries.append(summary)
                 missing_residues_in_target_chains[(chain_index, residue_index)] = residues
 
+
+    
+
     # Step 3: Print summary report of missing residues
     if verbose:
         if len(missing_residues_in_target_chains) > 0:
-            print(f"\nMissing residues by target chains:")
+            print(f"\nMissing residues in selected chains:")
             print(f"\n{'Chain ID':<10} {'Missing residues':<15} {'Position':<10}")
             print(f"{'-'*10} {'-'*15} {'-'*10}")
             for summary in summaries:
@@ -327,29 +400,19 @@ def get_chain_indices(chain_map, chain_ids, record_type):
 
 def get_chains_to_extract(chain_map, chain_indices, fixer_object, cutoff, filter_type=None):
     selected_chains = None
-
     # Map the original chain IDs to the potentially new IDs after cleaning
     # chain_ids = map_orig_to_fixer_chain_ids(input_file, selection)
     # print(f"• Chain ids: {chain_ids}")
     
-    # Identify atoms belonging to the specified HETATM chains
-    ligand_atoms = get_ligand_atoms(fixer_object, chain_indices, filter_type) 
-  
-    # Find protein residues within the cutoff distance of the HETATM atoms
-    residues_near_ligand = get_residues_near_ligand(
-        fixer_object, ligand_atoms, distance_threshold=cutoff
-    )
-
+    # Identify atoms belonging to the specified reference molecule
+    ligand_atoms = get_ligand_atoms(fixer_object, chain_indices) 
+    # Find protein residues within the cutoff distance of the reference molecule
+    residues_near_ligand = get_residues_near_ligand(fixer_object, ligand_atoms, distance_threshold=cutoff)
     print(f"• Residues near ligand: {len(residues_near_ligand)}")
-
     # Determine which chains contain the identified nearby residues
     selected_chain_indices = get_chains_near_ligand(fixer_object, residues_near_ligand, chain_indices)
-
     # Reverse map fixer chain index to fixer chain id. 
     selected_chain_ids = [(k[0], k[1]) for k, v in chain_map.items() if v.get('fixer_index') in selected_chain_indices]
-
-    print(f"• List of chain indices near ligand: {sorted(selected_chain_ids)}")  
-
     return selected_chain_ids
 
 
@@ -447,16 +510,30 @@ def map_orig_to_fixer_chain_ids(input_file, ligand_chain_ids, verbose=True):
     verbose and print(f"• Ligand chain ids: {ligand_chain_ids}")
     return ligand_chain_ids
 
-def get_ligand_atoms(fixer, chain_indices, filter_type=None):
+def get_ligand_atoms(fixer, ligand_selection):
     """Gets atoms from specified ligand chains."""
-
     ligand_atoms = []
-    for chain in fixer.topology.chains():
-        if chain.index in chain_indices:
-            for residue in chain.residues():
-                for atom in residue.atoms():
-                    ligand_atoms.append(atom)
+    
+    # Case 1: ligand_selection is a specific residue (chain_index, residue_id)
+    if isinstance(ligand_selection, tuple) and len(ligand_selection) == 2:
+        chain_index, residue_id = ligand_selection
+        for chain in fixer.topology.chains():
+            if chain.index == chain_index:
+                for residue in chain.residues():
+                    if residue.id == residue_id:
+                        for atom in residue.atoms():
+                            ligand_atoms.append(atom)
+    
+    # Case 2: ligand_selection is a list of chain indices
+    else:
+        for chain in fixer.topology.chains():
+            if chain.index in ligand_selection:
+                for residue in chain.residues():
+                    for atom in residue.atoms():
+                        ligand_atoms.append(atom)
+    
     return ligand_atoms
+
 
 
 def get_residues_near_ligand(fixer, ligand_atoms, distance_threshold):
