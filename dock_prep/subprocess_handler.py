@@ -117,7 +117,7 @@ def _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path,
         
         # Check if the output file was created
         if os.path.exists(abs_output_path):
-            print(f"✅Successfully created output file: {abs_output_path}")
+            print(f"✅Successfully created output file: {os.path.relpath(abs_output_path)}")
             print(f"• File size: {os.path.getsize(abs_output_path)} bytes")
             return True
         else:
@@ -176,7 +176,7 @@ def construct_shell_command(tool_name, abs_input_path, abs_output_path, pH_value
         # return f"conda run -n {env_vars['MGL_ENV_NAME']} {pythonsh} {prepare_receptor_script} -r {input_filename} -o {output_filename} -A checkhydrogens"
     elif tool_name == "OpenBabel":
         # Map file extensions to OpenBabel format codes
-        format_map = {'pdb': 'pdb','pqr': 'pqr','mol': 'mol','mol2': 'mol2','sdf': 'sdf','xyz': 'xyz','pdbqt': 'pdbqt','mmcif': 'cif','cif': 'cif'}
+        format_map = {'pdb': 'pdb','pqr': 'pqr','mol': 'mol','mol2': 'mol2','sdf': 'sdf','xyz': 'xyz','pdbqt': 'pdbqt','cif': 'mmcif','cif': 'cif'}
         input_format = format_map.get(input_ext)
         output_format = format_map.get(output_ext)
         
