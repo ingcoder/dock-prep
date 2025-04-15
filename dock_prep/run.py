@@ -199,7 +199,7 @@ def run_pipeline(args):
             file_paths['temp_refined'], 
             verbose=params['verbose']
         )
-        
+
         # PDBFixer renames chains - restore original chain IDs
         restore_original_chain_ids(
             file_paths['temp_refined'], 
@@ -250,13 +250,13 @@ def run_pipeline(args):
             config_file=params['config_file']
         )
 
-        params['verbose'] and add_separator("STEP 10: VALIDATING PDBQT FILE")  
-        validate_pdbqt_file(
-            file_paths['docking'],
-            file_paths['docking_final'],
-            ['B'],
-            verbose=params['verbose']
-        )
+        # params['verbose'] and add_separator("STEP 10: VALIDATING PDBQT FILE")  
+        # validate_pdbqt_file(
+        #     file_paths['docking'],
+        #     file_paths['docking_final'],
+        #     ['B'],
+        #     verbose=params['verbose']
+        # )
 
     else:
         # FULL OPTIMIZATION: Use MolProbity for hydrogen optimization
@@ -283,52 +283,7 @@ def run_pipeline(args):
             config_file=params['config_file']
         )
 
-        def remove_clean_records(input_file, output_file):
-            atom_number = 1
-            with open(input_file, 'r') as f, open(output_file, 'w') as fout:
-                for line in f:
-                    if line.startswith('ATOM') or line.startswith('HETATM'):
-                        # Format the atom number to exactly 5 characters (columns 7-11)
-                        # PDB format requires this to be right-justified in a 5-character field
-                        prefix = line[:6]  # "ATOM  " or "HETATM"
-                        rest_of_line = line[11:]  # Everything after the atom serial number
-                        
-                        # Create the new line with the correct atom numbering
-                        new_line = f"{prefix}{atom_number:5d}{rest_of_line}"
-                        
-                        # If the line is shorter than 80 characters, pad it
-                        if len(new_line.rstrip('\n')) < 80:
-                            new_line = f"{new_line.rstrip()}{' ' * (80 - len(new_line.rstrip()))}\n"
-                        
-                        # Write the fixed line
-                        fout.write(new_line)
-                        
-                        # Increment the atom counter
-                        atom_number += 1
-                    
-                        # Reset atom numbering if it exceeds PDB format limit (99999)
-                        if atom_number > 99999:
-                            print("Warning: Structure has more than 99999 atoms. Atom numbers will wrap around.")
-                            atom_number = 1
-                    elif line.startswith('CONECT'):
-                        print("Conect record found")
-                        continue
-                    else:
-                        fout.write(line)
-        
-        remove_clean_records(file_paths['edited'], file_paths['edited_no_conect'])
-
-        # from Bio.PDB import PDBParser, MMCIFIO
-
-        # # Parse the PDB file (set QUIET=False to see potential issues)
-        # parser = PDBParser(PERMISSIVE=True)
-        # structure = parser.get_structure("my_structure", file_paths['edited_no_conect'])
-
-        # # Write to mmCIF format
-        # io = MMCIFIO()
-        # io.set_structure(structure)
-        # io.save("output.cif")
-
+        fix_pdb_for_pdb2pqr(file_paths['edited'], file_paths['edited_no_conect'])
 
         # Step 3: Protonate with PDB2PQR
         params['verbose'] and add_separator("STEP 9: PROTONATION WITH PDB2PQR")
@@ -340,18 +295,17 @@ def run_pipeline(args):
             pH_value=params['ph_value'], 
             config_file=params['config_file']
         )
-        
-        # # Step 4: Create PDBQT file for AutoDock Vina
-        # params['verbose'] and add_separator("STEP 10: CREATING PDBQT FILE FOR AutoDock Vina")  
-        # run_program(
-        #     "MGLTools", 
-        #     file_paths['protonated_pqr'], 
-        #     file_paths['docking'], 
-        #     verbose=params['verbose'], 
-        #     pH_value=params['ph_value'], 
-        #     config_file=params['config_file']
-        # )
 
+        # Step 4: Create PDBQT file for AutoDock Vina
+        params['verbose'] and add_separator("STEP 10: CREATING PDBQT FILE FOR AutoDock Vina")  
+        run_program(
+            "MGLTools", 
+            file_paths['protonated_pqr'], 
+            file_paths['docking'], 
+            verbose=params['verbose'], 
+            pH_value=params['ph_value'], 
+            config_file=params['config_file']
+        )
 
         # params['verbose'] and add_separator("STEP 11: VALIDATING PDBQT FILE")  
         # validate_pdbqt_file(
