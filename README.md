@@ -59,7 +59,7 @@ chmod +x dock-prep/scripts/*.sh
 ./dock-prep/scripts/install_molprobity.sh #optional, but recommended
 
 # Prepare a protein from PDB ID
-dock-prep --pdb_id 2pgh --input_file dock-prep/dock_prep/examples/2pgh_original.pdb --verbose
+dock-prep --input_file dock-prep/dock_prep/examples/1n6d.pdb --reference_atom_chains H --cutoff 2.0 --verbose
 ```
 
 ## Tutorial
@@ -116,14 +116,17 @@ This will check that:
 
 Run the converter with a PDB ID or file:
 ```bash
-# Process entire protein (default behavior)
-dock-prep --pdb_id PDBID --file_name path/to/protein.pdb --verbose
+# Process entire protein (default behavior, works for small proteins)
+dock-prep --file_input path/to/protein.pdb --verbose
 
 # Process specific chains
-dock-prep --pdb_id PDBID --file_name path/to/protein.pdb --target_chains A,B
+dock-prep --file_input path/to/protein.pdb --include_chains A,B --verbose
 
-# Extract chains by distance from a reference chain in angstrom
-dock-prep --pdb_id PDBID --file_name path/to/protein.pdb reference_chain A --distance 5.0
+# Extract chains by distance from a reference peptide chain in angstrom (5 Angstrom by default)
+dock-prep --file_input path/to/protein.pdb reference_atom_chains H --cutoff 2.0 --verbose
+
+# Extract chains by distance from a reference small molecule hetatom chain in angstrom (5 Angstrom by default)
+dock-prep --file_input path/to/protein.pdb reference_hetatm_chains H --cutoff 2.0 --verbose
 ```
 
 ### Output Files 
@@ -136,7 +139,7 @@ The tool generates a series of progressively refined files that document each st
 | 📄`_structure_completed_final.pdb` | Structure with modeled residues | Fills in missing atoms and residues to create a complete protein model |
 | 📄`_structure_flipped_h_final.pdb` | Optimized with hydrogens | Contains MolProbity-optimized hydrogen positions and corrected side-chain orientations |
 | 📄`_structure_protonated.pqr` | Protonated structure | Includes atomic radii and charge parameters from PDB2PQR required for electrostatics |
-| 📄`_structure_docking.pdbqt` | Final docking-ready file | **Primary output file** with all parameters needed for AutoDock Vina docking simulations |
+| 📄`_structure_docking_final.pdbqt` | Final docking-ready file | **Primary output file** with all parameters needed for AutoDock Vina docking simulations |
 
 > **Note**: The `docking.pdbqt` file is the primary output that should be used for docking simulations with AutoDock Vina. Intermediate files are preserved to allow inspection of each preparation step.
 
