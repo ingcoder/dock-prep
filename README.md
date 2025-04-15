@@ -139,7 +139,7 @@ The tool generates a series of progressively refined files that document each st
 | 📄`_structure_completed_final.pdb` | Structure with modeled residues | Fills in missing atoms and residues to create a complete protein model |
 | 📄`_structure_flipped_h_final.pdb` | Optimized with hydrogens | Contains MolProbity-optimized hydrogen positions and corrected side-chain orientations |
 | 📄`_structure_protonated.pqr` | Protonated structure | Includes atomic radii and charge parameters from PDB2PQR required for electrostatics |
-| 📄`_structure_docking_final.pdbqt` | Final docking-ready file | **Primary output file** with all parameters needed for AutoDock Vina docking simulations |
+| 📄`_structure_docking.pdbqt` | Final docking-ready file | **Primary output file** with all parameters needed for AutoDock Vina docking simulations |
 
 > **Note**: The `docking.pdbqt` file is the primary output that should be used for docking simulations with AutoDock Vina. Intermediate files are preserved to allow inspection of each preparation step.
 
