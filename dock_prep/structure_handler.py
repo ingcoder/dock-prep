@@ -20,16 +20,16 @@ Author: Ingrid Barbosa-Farias
 Date: 2025-03-27
 """
 
-import os
 import sys
-from dock_prep.subprocess_handler import run_program
+import traceback
 
 try:
     import numpy as np
     from pdbfixer import PDBFixer
-    from openmm.app import PDBFile
+
     from openmm import unit
     from Bio import PDB
+
 except ImportError as e:
     print(f"ERROR: Missing dependency - {e}")
     print("\nPlease install the required dependencies:")
@@ -39,6 +39,7 @@ except ImportError as e:
     print("  - biopython: pip install biopython")
     print("\nPlease install the missing dependencies and try again.")
     sys.exit(1)
+
 
 #==============================================================================
 #                            UTILITY FUNCTIONS
@@ -50,308 +51,91 @@ def add_separator(message):
     print(message)
     print("="*80)
 
-#==============================================================================
-#                            FILE OPERATIONS
-#==============================================================================
-
-def extract_chains_to_pdb(input_filepath, output_filepath, target_chains=None):
-    """Extracts specified chains from a PDB file and saves to a new file."""
-    with open(input_filepath, 'r') as fin, open(output_filepath, 'w') as fout:
-        for line in fin:
-            if line.startswith("ATOM") or line.startswith("HETATM"):
-                chain_id = line[21]
-                if chain_id in target_chains:
-                    fout.write(line)
-            elif line.startswith("TER") and len(line) > 21:
-                chain_id = line[21]
-                if chain_id in target_chains:
-                    fout.write(line)
-            else:
-                fout.write(line)
-    
-    rel_path = os.path.relpath(output_filepath)
-    print(f"✅ Filtered PDB saved to {rel_path} containing chains {target_chains}")
-
-def save_structure_to_pdb(pdb_structure, output_filepath, verbose=True):
-    """Saves PDBFixer structure to a PDB file."""
-    with open(output_filepath, 'w') as f:
-        PDBFile.writeFile(pdb_structure.topology, pdb_structure.positions, f)
-    if verbose:
-        rel_path = os.path.relpath(output_filepath)
-        print(f"\n✅ Complete structure saved to {rel_path}")
-
-def restore_original_chain_ids(input_filepath, output_filepath, target_chains, verbose=True):
-    """
-    Restores original chain IDs in a PDB file created by PDBFixer.
-    
-    PDBFixer sometimes changes the chain IDs during processing. This function
-    maps the new chain IDs back to the original ones specified by the user.
-    
-
-    """
-    # Parse the input PDB file using Biopython's PDB parser
-    parser = PDB.PDBParser(QUIET=True)
-    structure = parser.get_structure("orig", input_filepath)
-    
-    # Get all chain IDs from the input file by iterating through all models and chains
-    input_file_chain_ids = [chain.id for model in structure for chain in model]
-    
-    # If no target chains were specified, use all chains from the input file
-    if target_chains is None:
-        target_chains = input_file_chain_ids
-    
-    # Create a mapping between the chains in the input file and the target chains
-    # This assumes chains are in the same order in both lists (PDBFixer typically preserves order)
-    chain_mapping = {orig_chain: new_chain for orig_chain, new_chain in zip(input_file_chain_ids, target_chains)}
-    verbose and print(f"• Chain mapping: {chain_mapping}")
-    
-    with open(input_filepath, 'r') as fin, open(output_filepath, 'w') as fout:
-         for line in fin:
-             # Process only ATOM and HETATM lines which contain atom coordinates
-             if line.startswith("ATOM") or line.startswith("HETATM"):
-                 # In PDB format, the chain ID is at position 21 (0-indexed)
-                 new_chain = line[21]
-                 # Only modify the chain ID if it has a mapping
-                 if new_chain in chain_mapping:
-                     # Get the target chain ID from the mapping
-                     fixed_chain = chain_mapping[new_chain]
-                     # Construct a new line by replacing just the chain ID character
-                     # This preserves all other information in the line
-                     line = line[:21] + fixed_chain + line[22:]
-             # Write the line (either modified or original) to the output file
-             fout.write(line)
-    if verbose:
-        rel_path = os.path.relpath(output_filepath)
-        print(f"✅ Fixed PDB saved to {rel_path}")
 
 #==============================================================================
-#                     STRUCTURE LOADING AND CLEANING
+#                      CHAIN ID MAPPING
 #==============================================================================
 
-def load_clean_structure(input_file, output_file, no_hetatm=True, verbose=True):
-    """Loads PDB file, removes heteroatoms, and returns a PDBFixer object."""
-    # Validate input file
-    if not os.path.exists(input_file):
-        raise FileNotFoundError(f"File not found. {input_file}")
-    if verbose:
-        # Option 1: Get path relative to current working directory
-        rel_path = os.path.relpath(input_file)
-        print("\nPath to PDB file:", rel_path)
-        
-        # Other options (commented out):
-        # Option 2: Just the filename without the directory path
-        # print("• Filename:", os.path.basename(pdb_filepath))
-        
-        # Option 3: Relative to a specific directory
-        # print("• Path relative to results folder:", os.path.relpath(pdb_filepath, 'results'))
-        
-        # Option 4: Shorten the path by showing ~ for home directory
-        # home = os.path.expanduser("~")
-        # if pdb_filepath.startswith(home):
-        #     shortened_path = pdb_filepath.replace(home, "~", 1)
-        #     print("• Path to PDB file:", shortened_path)
-        # else:
-        #     print("• Path to PDB file:", pdb_filepath)
-    
-    # # Prepare output filename
-    # base, ext = os.path.splitext(pdb_filepath)
-    # basename = os.path.basename(base)
-    # print(f"• Base: {basename}")
-    # print(os.getcwd)
-    # print(f"• Ext: {ext}")
-    # cleaned_filepath = f'{base}_clean{ext}'
-    
-    try:
-        # Step 1: Read and filter PDB content
-        with open(input_file, 'r') as f:
-            lines = f.readlines()
+def map_pdbfixer_chains_to_original(pdbfixer_obj, original_chain_ids):
+    """Maps PDBFixer chain IDs to original chain IDs."""
+    std_residues = set([
+        'ALA', 'ARG', 'ASN', 'ASP', 'CYS', 'GLN', 'GLU', 'GLY', 'HIS', 'ILE', 
+        'LEU', 'LYS', 'MET', 'PHE', 'PRO', 'SER', 'THR', 'TRP', 'TYR', 'VAL'
+    ])
 
-        # Step 2: Process lines and filter HETATM records
-        cleaned_lines = []
-        for line in lines:
-            if line.startswith("HETATM"):
-                if no_hetatm:  
-                    # Skip all HETATM lines
-                    continue
-                else:
-                    # Skip water molecules only
-                    water_molecules = ["HOH", "WAT", "H2O", "SOL", "DOD"]
-                    if any(water in line for water in water_molecules):
-                        continue
-            cleaned_lines.append(line)
+    chain_count = 0
+    chain_ids = {}
+    for chain in pdbfixer_obj.topology.chains():
+        if chain._residues[0].name in std_residues:
+            chain_ids[(chain.id, 'ATOM')] = {'fixer_index':chain_count, 'original_chain_id': original_chain_ids[chain_count]}
+        else:
+            chain_ids[(chain.id, 'HETATM')] = {'fixer_index':chain_count, 'original_chain_id': original_chain_ids[chain_count]}
+        chain_count += 1
+    print(f"✅ Created PDBFixer object with {chain_count} chains")
     
-        # Step 3: Write cleaned content to file
-        cleaned_pdb_text = "".join(cleaned_lines)
-        with open(output_file, 'w') as f:
-            f.write(cleaned_pdb_text)
+    return chain_ids
 
-        return load_structure_as_pdbfixer(input_file)
-    except Exception as e:
-        print(f"❌ Error processing PDB file: {e}")
-        raise
-        
-
-def load_structure_as_pdbfixer(input_file):
-        # Step 4: Create and return PDBFixer object
-    try:
-        fixer = PDBFixer(filename=input_file)
-        return fixer
-    except Exception as e:
-        print(f"❌ Error processing PDB file: {e}")
-        raise
-
-def count_residues(fixer, verbose=True):
-    """Counts residues and atoms in a PDBFixer object."""
-    residue_count = 0
-    atom_count = 0
-    for chain in fixer.topology.chains():
-        for residue in chain.residues():
-            residue_count += 1
-            for atom in residue.atoms():
-                atom_count += 1
-    
-    if verbose:
-        print("• Residue count:", residue_count)
-        print("• Atom count:", atom_count)
-    
-    return residue_count, atom_count
 
 #==============================================================================
-#                        STRUCTURE REFINEMENT
+#                        CHAIN SELECTION
 #==============================================================================
 
-def complete_missing_structure(pdb_fixer, missing_residues_dict=None, verbose=True):
-    """Completes missing residues and atoms in a PDBFixer object."""
-    if verbose:
-        print("\n> Before structure completion:")
-    
-    residue_count_before, atom_count_before = count_residues(pdb_fixer, verbose=verbose)
-    
-    # Step 1: Identify missing residues
-    pdb_fixer.findMissingResidues()
-    
-    # Step 2: Handle missing residues (automatic or from dictionary)
-    if missing_residues_dict is None:
-        auto_missing_residues = pdb_fixer.missingResidues
-        if verbose:
-            print(f"\n> Automatically detected missing residues: {len(auto_missing_residues)}")
-            for chain in auto_missing_residues:
-                print(f"• Chain {chain}: {len(auto_missing_residues[chain])} missing residue segments")
-    else:
-        # Use provided missing residues dictionary
-        pdb_fixer.missingResidues = missing_residues_dict
-        if verbose:
-            print(f"\n> Sanity check: number of chains with missing residues: {len(pdb_fixer.missingResidues)} == {len(missing_residues_dict)}")
-    
-    # Step 3: Identify and report missing atoms and terminals
-    pdb_fixer.findMissingAtoms()
-    missing_atoms = pdb_fixer.missingAtoms
-    missing_terminals = pdb_fixer.missingTerminals
-    if verbose:
-        print(f"> Number of residues with missing atoms found: {len(missing_atoms)} residues with missing atoms")
-        print(f"> Number of chains with missing terminals found: {len(missing_terminals)} chains with missing terminals")
-    
-    # Step 4: Add missing atoms to the structure
-    pdb_fixer.addMissingAtoms()
-    # Hydrogens can be added here if needed:
-    # pdb_fixer.addMissingHydrogens(pH=6.2)
-
-    if verbose:
-        print("\n> After structure completion:")
-    
-    residue_count_after, atom_count_after = count_residues(pdb_fixer, verbose=verbose)
-
-    return pdb_fixer, residue_count_before, atom_count_before, residue_count_after, atom_count_after
-
-def get_missing_residues_by_chain(pdb_fixer, target_chains, verbose=True):
-    """Gets missing residues in specified chains."""
-    summaries = []
-    missing_residues_in_target_chains = {}
-    
-    # Step 1: Create a mapping from chain indices (int) to chain objects
-    chain_index_map = {}
-    for chain in pdb_fixer.topology.chains():
-        if target_chains is not None:
-            if chain.id in target_chains:
-                # verbose and print('target chains', target_chains, chain.id)
-                # verbose and print(f"• Chain {chain.id} is in target chains")
-                chain_index_map[chain.index] = chain
-        else: # If no target chains are specified, include all chains
-            chain_index_map[chain.index] = chain
-    
-    # Step 2: Collect missing residues for (target) chains
-    for (chain_index, residue_index), residues in pdb_fixer.missingResidues.items():
-        if chain_index in chain_index_map:
-            # Skip residue index 0 (often used for special cases)
-            if residue_index != 0:  
-                chain = chain_index_map[chain_index]
-                summary = {
-                    'chain_id': chain.id,
-                    'chain_index': chain.index,
-                    'residue_index': residue_index,
-                    'missing_residues': residues,
-                    'missing_residues_count': len(residues)
-                }
-                summaries.append(summary)
-                missing_residues_in_target_chains[(chain_index, residue_index)] = residues
-
-    # Step 3: Print summary report of missing residues
-    if verbose:
-        print(f"\nMissing residues by target chains:")
-        print(f"\n{'Chain ID':<10} {'Missing residues':<15} {'Position':<10}")
-        print(f"{'-'*10} {'-'*15} {'-'*10}")
-        for summary in summaries:
-            print(f"{summary['chain_id']:<10} {summary['missing_residues_count']:<15} {summary['residue_index']:<10}")
-
-    return missing_residues_in_target_chains
-
-#==============================================================================
-#                      CHAIN AND RESIDUE ANALYSIS
-#==============================================================================
-
-def get_selected_chains(input_file, selection, fixer_object, cutoff):
+def get_chains_to_extract(chain_map, chain_ids, record_type, fixer_object, cutoff):
     selected_chains = None
+    # Map the original chain IDs to the potentially new IDs after cleaning
+    # chain_ids = map_orig_to_fixer_chain_ids(input_file, selection)
+    # print(f"• Chain ids: {chain_ids}")
 
-        # Map the original chain IDs to the potentially new IDs after cleaning
-    chain_ids = map_orig_to_new_chain(input_file, selection)
-    # Identify atoms belonging to the specified HETATM chains
-    ligand_atoms = get_ligand_atoms(fixer_object, chain_ids) 
-    # Find protein residues within the cutoff distance of the HETATM atoms
-    residues_near_ligand = get_residues_near_ligand(
-        fixer_object, ligand_atoms, distance_threshold=cutoff
-    )
-    # Determine which chains contain the identified nearby residues
-    selected_chains = get_chains_near_ligand(fixer_object, residues_near_ligand, chain_ids)
-
-    return selected_chains
-
-
-def map_orig_to_new_chain(input_file, ligand_chain_ids, verbose=True):
-    """Maps original chain IDs to PDBFixer internal representation."""
-    parser = PDB.PDBParser(QUIET=True)
-    structure = parser.get_structure("orig", input_file)
-    original_chain_ids = [chain.id for model in structure for chain in model]
-    verbose and print(f"• Original chain IDs: {original_chain_ids}")
-
-    fixer = PDBFixer(filename=input_file)
-    chain_map = {orig_chain.id: new_chain for orig_chain, new_chain in zip(fixer.topology.chains(), original_chain_ids)}
-    # verbose and print(f"• Map PDBFixer:OriginalPDB Chain Ids. {chain_map}")
-    ligand_chain_ids = [chain_map[orig_id] for orig_id in ligand_chain_ids]
+    chain_indices = _get_chain_indices(chain_map, chain_ids, record_type)
     
-    verbose and print(f"• Ligand chain ids: {ligand_chain_ids}")
-    return ligand_chain_ids
+    # Identify atoms belonging to the specified reference molecule
+    ligand_atoms = _get_ligand_atoms(fixer_object, chain_indices) 
+    # Find protein residues within the cutoff distance of the reference molecule
+    residues_near_ligand = _get_residues_near_ligand(fixer_object, ligand_atoms, distance_threshold=cutoff)
+    print(f"• Residues near ligand: {len(residues_near_ligand)}")
+    # Determine which chains contain the identified nearby residues
+    selected_chain_indices = _get_chains_near_ligand(fixer_object, residues_near_ligand, chain_indices)
+    # Reverse map fixer chain index to fixer chain id. 
+    selected_chain_ids = [(k[0], k[1]) for k, v in chain_map.items() if v.get('fixer_index') in selected_chain_indices]
+    return selected_chain_ids
 
-def get_ligand_atoms(fixer, ligand_chain_ids):
+def _get_chain_indices(chain_map, chain_ids, record_type):
+    """Gets chain indices for specified chain IDs."""
+    if isinstance(chain_ids, str):
+        result = [chain_ids]
+    else:
+        # Get all valid indices as a list
+        result = [chain_map.get((chain_id, record_type)).get('fixer_index') 
+                for chain_id in chain_ids 
+                if (chain_id, record_type) in chain_map]
+    print(f"• Chain indices: {result}")
+    return result
+
+def _get_ligand_atoms(fixer, ligand_selection):
     """Gets atoms from specified ligand chains."""
     ligand_atoms = []
-    for chain in fixer.topology.chains():
-        if chain.id in ligand_chain_ids:
-            for residue in chain.residues():
-                for atom in residue.atoms():
-                    ligand_atoms.append(atom)
+    
+    # Case 1: ligand_selection is a specific residue (chain_index, residue_id)
+    if isinstance(ligand_selection, tuple) and len(ligand_selection) == 2:
+        chain_index, residue_id = ligand_selection
+        for chain in fixer.topology.chains():
+            if chain.index == chain_index:
+                for residue in chain.residues():
+                    if residue.id == residue_id:
+                        for atom in residue.atoms():
+                            ligand_atoms.append(atom)
+    
+    # Case 2: ligand_selection is a list of chain indices
+    else:
+        for chain in fixer.topology.chains():
+            if chain.index in ligand_selection:
+                for residue in chain.residues():
+                    for atom in residue.atoms():
+                        ligand_atoms.append(atom)
+    
     return ligand_atoms
 
-def get_residues_near_ligand(fixer, ligand_atoms, distance_threshold):
+def _get_residues_near_ligand(fixer, ligand_atoms, distance_threshold):
     """Finds residues near ligand based on distance threshold."""
     near_residues = set()
     
@@ -374,15 +158,243 @@ def get_residues_near_ligand(fixer, ligand_atoms, distance_threshold):
                     
     return near_residues
 
-def get_chains_near_ligand(fixer, near_residues, ligand_chain_ids, verbose=True):
+def _get_chains_near_ligand(fixer, near_residues, chain_indices, verbose=True):
     """Gets chain IDs for residues near ligand, excluding ligand chains."""
     chain_ids = set()
     for chain in fixer.topology.chains():
-        if chain.id in ligand_chain_ids:
+        if chain.index in chain_indices:
             continue
         for residue in chain.residues():
             if residue in near_residues:
-                chain_ids.add(chain.id)
+                chain_ids.add(chain.index)
                 break  # Found at least one residue in this chain; move to the next chain.
-    verbose and print(f"• Chains forming the target site: {sorted(chain_ids)}")  
+    
     return sorted(set(chain_ids))
+
+
+#==============================================================================
+#                     HELPER FUNCTIONS
+#==============================================================================
+
+def load_structure_as_pdbfixer(input_file):
+    """Creates and returns a PDBFixer object from a PDB file."""
+    try:
+        fixer = PDBFixer(filename=input_file)
+        return fixer
+    except Exception as e:
+        print(f"Error: Failed to process PDB file with PDBFixer: {e}")
+        sys.exit(1)
+
+def count_residues(fixer, quiet=True, verbose=True):
+    """Counts residues and atoms in a PDBFixer object."""
+    residue_count = 0
+    atom_count = 0
+    for chain in fixer.topology.chains():
+        for residue in chain.residues():
+            residue_count += 1
+            for atom in residue.atoms():
+                atom_count += 1
+    if quiet:
+        return residue_count, atom_count
+    else:
+        print("• Residue count:", residue_count)
+        print("• Atom count:", atom_count)
+        return residue_count, atom_count
+    
+def count_chains_biopython(input_file):
+    parser = PDB.PDBParser(QUIET=True)
+    structure = parser.get_structure("structure", input_file)
+
+    print("\nBiopython structure analysis:")
+    for model in structure:
+        for chain in model:
+            chain_id = chain.id
+            standard_residues = 0
+            nonstandard_residues = 0
+            for residue in chain:
+                if residue.id[0] == ' ':
+                    standard_residues += 1
+                else:
+                    nonstandard_residues += 1
+            print(f"Chain {chain_id}: {standard_residues} standard, {nonstandard_residues} non-standard residues")
+
+
+#==============================================================================
+#                     MISSING RESIDUES ANALYSIS
+#==============================================================================
+
+def get_missing_residues_by_chain(original_pdbfixer, selected_chains, include_n_terminal_gaps=True, verbose=True):
+    """Gets missing residues in specified chains."""
+    summaries = []
+    missing_residues_in_target_chains = {}
+
+    selected_chains_ids = [chain[0] for chain in selected_chains] if selected_chains is not None else None
+
+    original_pdbfixer.findMissingResidues()
+    
+    chain_index_to_object = {}
+    for chain in original_pdbfixer.topology.chains():
+        if selected_chains_ids is not None:
+            if chain.id in selected_chains_ids:
+                print(f"• Chain {chain.id} is in selected chains {selected_chains_ids}")
+                chain_index_to_object[chain.index] = chain
+        else:
+            chain_index_to_object[chain.index] = chain
+ 
+    chain_id_to_index = {}                
+    # Step 2: Collect missing residues for target chains
+    for (chain_index, residue_index), residues in original_pdbfixer.missingResidues.items():
+        # Skip if chain not in our target chains
+        if chain_index not in chain_index_to_object:
+            continue
+            
+        # Skip residue index 0 (N-terminal gaps) unless explicitly requested
+        if residue_index == 0 and not include_n_terminal_gaps:
+            continue
+            
+        # Get chain and create summary
+        chain = chain_index_to_object[chain_index]
+        # verbose and print(f"Chain {chain_index}, residue_index: {residue_index}, residues: {residues}")
+
+        chain_id_to_index[chain.id] = chain.index
+        
+        summary = {
+            'chain_id': chain.id,
+            'chain_index': chain.index,
+            'residue_index': residue_index,
+            'missing_residues': residues,
+            'missing_residues_count': len(residues)
+        }
+        summaries.append(summary)
+        missing_residues_in_target_chains[(chain_index, residue_index)] = residues
+
+    # Step 3: Print summary report of missing residues
+    if verbose:
+        if summaries:
+            print(f"\nMissing residues in selected chains:")
+            print(f"\n{'Chain ID':<10} {'Missing residues':<15} {'Position':<10}")
+            print(f"{'-'*10} {'-'*15} {'-'*10}")
+            for summary in summaries:
+                print(f"{summary['chain_id']:<10} {summary['missing_residues_count']:<15} {summary['residue_index']:<10}")
+        else:
+            print("No missing residues found in target chains")
+
+    return missing_residues_in_target_chains, chain_id_to_index
+
+
+#==============================================================================
+#                        STRUCTURE REFINEMENT
+#==============================================================================
+
+def complete_missing_structure(pdb_fixer, found_missing_residues=None, found_missing_chain_id_to_index=None, verbose=True):
+    """Completes missing residues and atoms in a PDBFixer object."""
+    residue_count_before, atom_count_before = count_residues(pdb_fixer, quiet=True, verbose=verbose)
+   
+    missing_residues_dict = _transform_missing_residues(pdb_fixer, found_missing_residues, found_missing_chain_id_to_index)
+
+
+    pdb_fixer.findMissingResidues()
+    
+    # Step 2: Handle missing residues (automatic or from dictionary)
+    if missing_residues_dict is None:
+        auto_missing_residues = pdb_fixer.missingResidues
+        print(f"\n> Automatically detected missing residues: {len(auto_missing_residues)}")
+        for chain in auto_missing_residues:
+            print(f"• Chain {chain}: {len(auto_missing_residues[chain])} missing residue segments")
+    else:        
+        pdb_fixer.missingResidues = missing_residues_dict
+    
+    # Step 3: Identify and report missing atoms and terminals
+    try:        # Find missing atoms (and internal structures, including terminals)
+        pdb_fixer.findMissingAtoms()
+        missing_atoms = pdb_fixer.missingAtoms
+        missing_terminals = pdb_fixer.missingTerminals
+        if verbose:
+            print(f"> Missing atoms found in {len(missing_atoms)} residues")
+            print(f"> Missing terminals found in {len(missing_terminals)} chains")
+    except Exception as e:
+        print(f"Error: Failed to find missing atoms: {e}")
+        traceback.print_exc()
+        sys.exit(1)
+    
+    # Step 4: Add missing atoms AND missing residues to the structure
+    try:
+        verbose and print("\n> Adding missing residues and atoms...")
+        
+        # This single call adds both missing residues AND missing atoms
+        pdb_fixer.addMissingAtoms()
+        
+        # DEBUGGING: Check if residues were actually added
+        topology_after = pdb_fixer.topology
+        chain_count_after = sum(1 for _ in topology_after.chains())
+        residue_count_check_after = sum(1 for _ in topology_after.residues())
+    except Exception as e:
+        print(f"Error: Failed to add missing atoms and residues: {e}")
+        traceback.print_exc()
+        sys.exit(1)
+    # Hydrogens can be added here if needed:
+    # pdb_fixer.addMissingHydrogens(pH=6.2)
+    if verbose:
+        print("\n> After structure completion:")
+    
+    residue_count_after, atom_count_after = count_residues(pdb_fixer, verbose=verbose)
+
+    # Report changes
+    if verbose:
+        res_diff = residue_count_after - residue_count_before
+        atom_diff = atom_count_after - atom_count_before
+        print(f"> Added {res_diff} residues and {atom_diff} atoms to the structure")
+        
+    return pdb_fixer
+
+
+def _transform_missing_residues(clean_fixer_object, found_missing_residues, found_missing_chain_id_to_index):
+    """
+    Translates missing residue information between different chain numbering systems.
+    The function converts from chain indices to chain IDs and then back to chain indices in the new structure.
+    It's properly taking the missing residues information from the original structure and transforming it to be compatible with the cleaned structure.
+    
+    Problem:
+    When we fix the protein structure with addMissingResidues, the chains get renumbered.
+    This means the chain indices we found earlier no longer match the new structure.
+    
+    Solution:
+    This function creates a mapping between the original chain IDs and the new chain indices,
+    allowing us to correctly apply the missing residue information to the right chains.
+    
+    Parameters:
+    - pdb_fixer_object: The PDBFixer object with the cleaned structure
+    - found_missing_residues: Dictionary of missing residues using original chain indices
+    - found_missing_chain_id_to_index: Returned together with found_missing_residues and maps chain ids to indices
+    
+    Returns:
+    Dictionary of missing residues with updated chain indices matching the cleaned structure
+    """
+    # Step 1. Maps chain ids to indices in the cleaned structure {B : 0, C : 1, ...}
+    # ID -> Index
+    cleaned_chain_id_to_index = {}
+    for chain in clean_fixer_object.topology.chains():
+        cleaned_chain_id_to_index[chain.id] = chain.index
+
+    # Corrected missing residues dictionary
+    transformed_missing_residues = {}
+
+    # Get chain indices found in missing residues of original structure
+    for (chain_idx, res_idx), residues in found_missing_residues.items():
+
+        # Map indices to ids
+        chain_id = None
+        for orig_id, orig_idx in found_missing_chain_id_to_index.items():
+            if orig_idx == chain_idx:
+                chain_id = orig_id
+                break
+        
+        # If id in cleaned structure map id to index of 
+        if chain_id is not None and chain_id in cleaned_chain_id_to_index:
+            new_chain_idx = cleaned_chain_id_to_index[chain_id]
+            transformed_missing_residues[(new_chain_idx, res_idx)] = residues
+            # if params['verbose']:
+            #     print(f"• Mapped missing residues from chain index {chain_idx} to {new_chain_idx} (Chain ID: {chain_id})")
+
+    return transformed_missing_residues
+        

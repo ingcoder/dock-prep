@@ -25,8 +25,6 @@ def _check_if_file_exists(input_path):
             print(f"  - {file}")
         raise FileNotFoundError(f"Input file not found: {input_path}")
     else:
-        print(f"✅ Input file exists: {input_path}")
-        print(f"File size: {os.path.getsize(input_path)} bytes")
         return True
 
 def get_conda_env():
@@ -60,7 +58,7 @@ def get_env_vars(config_file):
         env_vars = json.load(f)
     return env_vars
 
-def _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path, verbose=True, config_file=None):
+def _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path, verbose=True, config_file=None, timeout=None):
     """
     Runs a subprocess command and returns the output.
     """
@@ -75,6 +73,14 @@ def _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path,
     conda_env = get_conda_env()
     print(f"Current conda environment: {conda_env}")
     
+    # Default timeout for subprocess execution (in seconds)
+    if timeout is None:
+        # Use longer timeout for PDB2PQR as it can take longer for complex structures
+        if tool_name == "PDB2PQR":
+            timeout = 1800  # 30 minutes for PDB2PQR
+        else:
+            timeout = 300   # 5 minutes for other tools
+    
     try:
         # MGLTools script is looking for the file in the current working directory,
         # not in the absolute path you're providing, so we need to change the working directory
@@ -82,7 +88,7 @@ def _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path,
             input_dir = os.path.dirname(abs_input_path)
             input_filename = os.path.basename(abs_input_path)
             output_filename = os.path.basename(abs_output_path)
-            print(f"input_dir: {input_dir}")
+            print(f"• input_dir: {input_dir}")
             
             # Change working directory
             if input_dir:
@@ -100,7 +106,21 @@ def _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path,
             # verbose and print(f"Updated command: {command}")
         
         # Run the command
-        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=300, check=True)
+        # result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=300)
+        try:
+            print(f"Running command with timeout: {timeout} seconds")
+            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=timeout, check=True)
+        except subprocess.CalledProcessError as e:
+            print(e.stdout)
+            # For MolProbity, continue anyway if the output file exists
+            if tool_name == "MolProbity" and os.path.exists(abs_output_path):
+                print(f"Warning: {tool_name} returned non-zero exit code {e.returncode} but output file was created")
+                return True
+            else:
+                raise
+        except subprocess.TimeoutExpired as e:
+            print(f"Command timed out after {timeout} seconds. Consider increasing the timeout for this operation.")
+            raise
         
         # # Print command output if verbose
         # if verbose and result.stdout:
@@ -109,8 +129,8 @@ def _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path,
         
         # Check if the output file was created
         if os.path.exists(abs_output_path):
-            print(f"Successfully created output file: {abs_output_path}")
-            print(f"File size: {os.path.getsize(abs_output_path)} bytes")
+            print(f"✅Successfully created output file: {os.path.relpath(abs_output_path)}")
+            print(f"• File size: {os.path.getsize(abs_output_path)} bytes")
             return True
         else:
             print("Error: Output file was not created despite successful command execution")
@@ -168,7 +188,7 @@ def construct_shell_command(tool_name, abs_input_path, abs_output_path, pH_value
         # return f"conda run -n {env_vars['MGL_ENV_NAME']} {pythonsh} {prepare_receptor_script} -r {input_filename} -o {output_filename} -A checkhydrogens"
     elif tool_name == "OpenBabel":
         # Map file extensions to OpenBabel format codes
-        format_map = {'pdb': 'pdb','pqr': 'pqr','mol': 'mol','mol2': 'mol2','sdf': 'sdf','xyz': 'xyz','pdbqt': 'pdbqt','mmcif': 'cif','cif': 'cif'}
+        format_map = {'pdb': 'pdb','pqr': 'pqr','mol': 'mol','mol2': 'mol2','sdf': 'sdf','xyz': 'xyz','pdbqt': 'pdbqt','cif': 'mmcif','cif': 'cif'}
         input_format = format_map.get(input_ext)
         output_format = format_map.get(output_ext)
         
@@ -186,15 +206,55 @@ def construct_shell_command(tool_name, abs_input_path, abs_output_path, pH_value
     elif tool_name == "PDB2PQR":
         return f"pdb2pqr30 --ff AMBER --keep-chain --titration-state-method propka --with-ph {pH_value} {abs_input_path} {abs_output_path}"
    
-def run_program(tool_name, input_path, output_path, verbose=True, pH_value=7.4, config_file=None):
+def run_program(tool_name, input_path, output_path, verbose=True, pH_value=7.4, config_file=None, timeout=None):
     """
     Runs a program with the given tool name and command.
+    
+    Parameters:
+    -----------
+    tool_name : str
+        Name of the tool to run (MGLTools, OpenBabel, MolProbity, PDB2PQR)
+    input_path : str
+        Path to the input file
+    output_path : str
+        Path to the output file
+    verbose : bool
+        Whether to print verbose output
+    pH_value : float
+        pH value for PDB2PQR calculations
+    config_file : str
+        Path to the configuration file
+    timeout : int, optional
+        Timeout in seconds for subprocess execution. If None, defaults to 300s (or 1800s for PDB2PQR)
     """
     # Convert to absolute paths
     abs_input_path = os.path.abspath(input_path)
     abs_output_path = os.path.abspath(output_path)
 
     _check_if_file_exists(abs_input_path)
+    
+    # Special handling for PQR files with MGLTools
+    # MGLTools has difficulty parsing PQR files directly, so convert to PDB first
+    input_ext = os.path.splitext(abs_input_path)[1].lower().lstrip('.')
+    if tool_name == "MGLTools" and input_ext == "pqr":
+        print("Detected PQR input file for MGLTools. Converting to PDB format first...")
+        # Create temporary PDB file
+        temp_pdb_path = abs_input_path.replace('.pqr', '_temp.pdb')
+        
+        # Use OpenBabel to convert PQR to PDB
+        obabel_command = f"obabel -ipqr {abs_input_path} -opdb -O {temp_pdb_path}"
+        try:
+            print(f"Running conversion command: {obabel_command}")
+            subprocess.run(obabel_command, shell=True, check=True, capture_output=True, text=True)
+            if os.path.exists(temp_pdb_path):
+                print(f"Successfully converted PQR to PDB: {os.path.relpath(temp_pdb_path)}")
+                # Update input path to use the converted PDB file
+                abs_input_path = temp_pdb_path
+            else:
+                print("Warning: PQR to PDB conversion failed. Attempting to proceed with original PQR file.")
+        except Exception as e:
+            print(f"Warning: PQR to PDB conversion failed: {str(e)}")
+            print("Attempting to proceed with original PQR file.")
     
     # Use named parameters to avoid confusion with positional parameters
     command = construct_shell_command(tool_name=tool_name, 
@@ -207,4 +267,14 @@ def run_program(tool_name, input_path, output_path, verbose=True, pH_value=7.4, 
     if not command:
         raise ValueError(f"Failed to construct a valid command for {tool_name}")
         
-    _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path, verbose, config_file)
+    success = _run_subprocess_command(tool_name, command, abs_input_path, abs_output_path, verbose, config_file, timeout=timeout)
+    
+    # Clean up temporary files
+    if tool_name == "MGLTools" and input_ext == "pqr" and os.path.exists(temp_pdb_path):
+        try:
+            os.remove(temp_pdb_path)
+            print(f"Removed temporary PDB file: {os.path.relpath(temp_pdb_path)}")
+        except Exception as e:
+            print(f"Warning: Failed to remove temporary PDB file: {str(e)}")
+    
+    return success
