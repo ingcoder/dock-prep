@@ -110,23 +110,23 @@ This will check that:
 - External tools (OpenBabel, PDB2PQR) are on your PATH
 - Configuration-based tools (MGLTools, MolProbity) are properly configured
 
-## Usage (Local machine, Linux or MacOS)
+## Usage (Linux or MacOS)
 
-1️⃣ **Download** the desired PDB file from the Protein Data Bank.
+1️⃣ **Download pdb** the desired PDB file from the Protein Data Bank.
 
-2️⃣ **Copy** the file into your project folder.
+2️⃣ **Move pdb** the file into your project folder.
 
-3️⃣ **Activate** the Conda environment (if not already active):   
+3️⃣ **Activate conda** the Conda environment (if not already active):   
 ```bash 
 conda activate dock-prep
 ```
 
-4️⃣ **Run** one of the dock-prep commands shown below, e.g. 
+4️⃣ **Run dock-prep** one of the dock-prep commands shown below, e.g. 
 ```bash 
 dock-prep --file_input MyProjectFolder/1abc.pdb --verbose
 ```
 
-5️⃣ **Check** the processed file in the automatically created **results/** folder inside your project directory.
+5️⃣ **Check results** the processed file are the automatically created **results/** folder inside your project directory.
 
 Your file structure will look like this. 
 ```text
@@ -143,14 +143,16 @@ If you want to use the colab notebook with your own file
 
 1️⃣ **Copy Notebbook** File -> Save a copy in drive 
 
-2️⃣ **Installation** Run all cells in installation to install dock-prep and dependencies
+2️⃣ **Install dock-prep** Run all cells in installation to install dock-prep and dependencies
 
-3️⃣ **Download** the desired PDB file from the Protein Data Bank.
+3️⃣ **Download pdb** the desired PDB file from the Protein Data Bank.
 
-4️⃣ **Upload** your file to colab. Click on folder icon on left panel and then on upload icon witht the arrow pointing up. It will be uploaded to the content folder.
-![File Upload](https://github.com/user-attachments/assets/4527e2ff-c436-4e94-ab1c-bfb86f0a4fed)
+4️⃣ **Upload pdb** your file to colab. Click the folder icon in the sidebar, then the ⬆️ upload button. The project folder in colab is called content/.
+<img width="200" alt="Image" src="https://github.com/user-attachments/assets/4dc662f8-f628-4538-b801-842456a3bdfa" />
 
-5️⃣ **Run** dock-prep --file_input content/1abc.pdb --verbose --skip_molprobity
+5️⃣ **Run dock-prep** dock-prep --file_input content/1abc.pdb --verbose --skip_molprobity
+
+6️⃣ **Check results** the processed file are in the automatically created **results/** folder inside the content/ directory.
 
 Your file structure will look like this. 
 ```text
