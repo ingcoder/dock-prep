@@ -112,21 +112,46 @@ This will check that:
 
 ## Usage
 
+1️⃣ **Download** the desired PDB file from the Protein Data Bank.
+
+2️⃣ **Copy** the file in your project folder.
+
+3️⃣ **Activate** the Conda environment (if not already active):   
+```bash 
+conda activate dock-prep
+```
+
+4️⃣ **Run** one of the dock-prep commands shown below, e.g. 
+```bash 
+dock-prep --file_input MyProjectFolder/1abc.pdb --verbose
+```
+
+5️⃣ **Check** the processed file in the automatically created **results/** folder inside your project directory.
+
+Your file structure will look like this. 
+```text
+MyProjectFolder/
+├── dock-prep/                      # Dock-Prep repo or package
+├── 1abc.pdb                        # raw input structure
+└── results/
+    └── 1abc_structure_docking.pdbqt
+ ```
+
 ### Basic Commands
 
 Run the converter with a PDB ID or file:
 ```bash
 # Process entire protein (default behavior, works for small proteins)
-dock-prep --file_input path/to/protein.pdb --verbose
+dock-prep --file_input path/to/1abc.pdb --verbose
 
 # Process specific chains
-dock-prep --file_input path/to/protein.pdb --include_chains A,B --verbose
+dock-prep --file_input path/to/1abc.pdb --include_chains A,B --verbose
 
 # Extract chains by distance from a reference peptide chain in angstrom (5 Angstrom by default)
-dock-prep --file_input path/to/protein.pdb reference_atom_chains H --cutoff 2.0 --verbose
+dock-prep --file_input path/to/1abc.pdb reference_atom_chains H --cutoff 2.0 --verbose
 
 # Extract chains by distance from a reference small molecule hetatom chain in angstrom (5 Angstrom by default)
-dock-prep --file_input path/to/protein.pdb reference_hetatm_chains H --cutoff 2.0 --verbose
+dock-prep --file_input path/to/1abc.pdb reference_hetatm_chains H --cutoff 2.0 --verbose
 ```
 
 ### Output Files 
