@@ -110,11 +110,11 @@ This will check that:
 - External tools (OpenBabel, PDB2PQR) are on your PATH
 - Configuration-based tools (MGLTools, MolProbity) are properly configured
 
-## Usage
+## Usage (Local machine, Linux or MacOS)
 
 1️⃣ **Download** the desired PDB file from the Protein Data Bank.
 
-2️⃣ **Copy** the file in your project folder.
+2️⃣ **Copy** the file into your project folder.
 
 3️⃣ **Activate** the Conda environment (if not already active):   
 ```bash 
@@ -136,6 +136,31 @@ MyProjectFolder/
 └── results/
     └── 1abc_structure_docking.pdbqt
  ```
+
+## Usage (Colab Notebook)
+If you want to use the colab notebook with your own file 
+[Run the interactive tutorial in Google Colab](https://colab.research.google.com/drive/1WDyGSLmT-XjFkU1L3d-mtd0GoD7p8EEy?usp=sharing)
+
+1️⃣ **Copy Notebbook** File -> Save a copy in drive 
+
+2️⃣ **Installation** Run all cells in installation to install dock-prep and dependencies
+
+3️⃣ **Download** the desired PDB file from the Protein Data Bank.
+
+4️⃣ **Upload** your file to colab. Click on folder icon on left panel and then on upload icon witht the arrow pointing up. It will be uploaded to the content folder.
+![File Upload](https://github.com/user-attachments/assets/4527e2ff-c436-4e94-ab1c-bfb86f0a4fed)
+
+5️⃣ **Run** dock-prep --file_input content/1abc.pdb --verbose --skip_molprobity
+
+Your file structure will look like this. 
+```text
+content/
+├── dock-prep/                      # Dock-Prep repo or package
+├── 1abc.pdb                        # raw input structure
+└── results/
+    └── 1abc_structure_docking.pdbqt
+```
+
 
 ### Basic Commands
 
