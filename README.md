@@ -128,8 +128,8 @@ dock-prep --file_input path/to/1abc.pdb --verbose
 
 5️⃣ **Check results** The processed file are in the automatically created **results/** folder inside your project directory.
 
-Your file structure will look like this. 
 ```text
+Your folder structure should look like this:
 MyProjectFolder/
 ├── dock-prep/                      # Dock-Prep repo or package
 ├── 1abc.pdb                        # raw input structure
@@ -141,22 +141,28 @@ MyProjectFolder/
 If you want to run the colab notebook using your own pdb file: 
 [Run the interactive tutorial in Google Colab](https://colab.research.google.com/drive/1WDyGSLmT-XjFkU1L3d-mtd0GoD7p8EEy?usp=sharing)
 
-1️⃣ **Copy Notebbook** Open link above and copy notebooke with: File -> Save a copy in drive 
+1️⃣ **Copy Notebook** Open link above and copy notebooke with: File -> Save a copy in drive 
 
 2️⃣ **Install dock-prep** Run all cells in installation section to install dock-prep and dependencies
 
 3️⃣ **Download pdb** from the Protein Data Bank.
 
-4️⃣ **Upload pdb** file to colab. Click the folder icon in the sidebar, then the ⬆️ upload button. It will upload the file to your working directory called content/.
+4️⃣ **Upload pdb** file to colab. Click the folder icon in the sidebar, then the ⬆️ upload button. The file is saved to the working directory (named content/).
+(
+
 <img width="200" alt="Image" src="https://github.com/user-attachments/assets/4dc662f8-f628-4538-b801-842456a3bdfa" />
 
-5️⃣ **Run dock-prep** replace the name of the pdb file with your filename and run the cell containing dock-prep --file_input 1abc.pdb --verbose --skip_molprobity. 
-Replace filename with your filename.
-
-6️⃣ **Check results** in the automatically created **results/** folder inside the content/ directory.
-
-Your file structure will look like this. 
+5️⃣ **Run dock-prep** replace the name of the pdb file with your filename and run the cell with the dock-prep command: 
 ```text
+dock-prep --file_input 1abc.pdb --verbose --skip_molprobity 
+ ```
+Note: If you use a --reference_chains flag you may have to increase the cutoff distance if you get an error. The program will protest if it can't find a chain within the cutoff distance. This will be fixed. 
+
+6️⃣ **Check results** in the automatically created **results/** folder in your current (content) directory.
+
+
+```text
+Your folder structure should look like this:
 content/
 ├── dock-prep/                      # Dock-Prep repo or package
 ├── 1abc.pdb                        # raw input structure
