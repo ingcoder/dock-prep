@@ -112,21 +112,21 @@ This will check that:
 
 ## Usage (Linux or MacOS)
 
-1️⃣ **Download pdb** the desired PDB file from the Protein Data Bank.
+1️⃣ **Download pdb** from the Protein Data Bank.
 
-2️⃣ **Move pdb** the file into your project folder.
+2️⃣ **Move pdb** into your project folder.
 
-3️⃣ **Activate conda** the Conda environment (if not already active):   
+3️⃣ **Activate conda** environment (if not already active):   
 ```bash 
 conda activate dock-prep
 ```
 
-4️⃣ **Run dock-prep** one of the dock-prep commands shown below, e.g. 
+4️⃣ **Run dock-prep** with one of the dock-prep commands shown below, e.g. 
 ```bash 
 dock-prep --file_input MyProjectFolder/1abc.pdb --verbose
 ```
 
-5️⃣ **Check results** the processed file are the automatically created **results/** folder inside your project directory.
+5️⃣ **Check results** The processed file are in the automatically created **results/** folder inside your project directory.
 
 Your file structure will look like this. 
 ```text
@@ -138,21 +138,22 @@ MyProjectFolder/
  ```
 
 ## Usage (Colab Notebook)
-If you want to use the colab notebook with your own file 
+If you want to run the colab notebook using your own pdb file: 
 [Run the interactive tutorial in Google Colab](https://colab.research.google.com/drive/1WDyGSLmT-XjFkU1L3d-mtd0GoD7p8EEy?usp=sharing)
 
-1️⃣ **Copy Notebbook** File -> Save a copy in drive 
+1️⃣ **Copy Notebbook** Open link above and copy notebooke with: File -> Save a copy in drive 
 
-2️⃣ **Install dock-prep** Run all cells in installation to install dock-prep and dependencies
+2️⃣ **Install dock-prep** Run all cells in installation section to install dock-prep and dependencies
 
-3️⃣ **Download pdb** the desired PDB file from the Protein Data Bank.
+3️⃣ **Download pdb** from the Protein Data Bank.
 
-4️⃣ **Upload pdb** your file to colab. Click the folder icon in the sidebar, then the ⬆️ upload button. The project folder in colab is called content/.
+4️⃣ **Upload pdb** file to colab. Click the folder icon in the sidebar, then the ⬆️ upload button. The project folder in colab is called content/.
 <img width="200" alt="Image" src="https://github.com/user-attachments/assets/4dc662f8-f628-4538-b801-842456a3bdfa" />
 
-5️⃣ **Run dock-prep** dock-prep --file_input content/1abc.pdb --verbose --skip_molprobity
+5️⃣ **Run dock-prep** replace the name of the pdb file with your filename and run the cell containing dock-prep --file_input content/1abc.pdb --verbose --skip_molprobity. 
+Replace filename with your filename.
 
-6️⃣ **Check results** the processed file are in the automatically created **results/** folder inside the content/ directory.
+6️⃣ **Check results** in the automatically created **results/** folder inside the content/ directory.
 
 Your file structure will look like this. 
 ```text
