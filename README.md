@@ -123,7 +123,7 @@ conda activate dock-prep
 
 4️⃣ **Run dock-prep** with one of the dock-prep commands shown below, e.g. 
 ```bash 
-dock-prep --file_input MyProjectFolder/1abc.pdb --verbose
+dock-prep --file_input path/to/1abc.pdb --verbose
 ```
 
 5️⃣ **Check results** The processed file are in the automatically created **results/** folder inside your project directory.
@@ -147,10 +147,10 @@ If you want to run the colab notebook using your own pdb file:
 
 3️⃣ **Download pdb** from the Protein Data Bank.
 
-4️⃣ **Upload pdb** file to colab. Click the folder icon in the sidebar, then the ⬆️ upload button. The project folder in colab is called content/.
+4️⃣ **Upload pdb** file to colab. Click the folder icon in the sidebar, then the ⬆️ upload button. It will upload the file to your working directory called content/.
 <img width="200" alt="Image" src="https://github.com/user-attachments/assets/4dc662f8-f628-4538-b801-842456a3bdfa" />
 
-5️⃣ **Run dock-prep** replace the name of the pdb file with your filename and run the cell containing dock-prep --file_input content/1abc.pdb --verbose --skip_molprobity. 
+5️⃣ **Run dock-prep** replace the name of the pdb file with your filename and run the cell containing dock-prep --file_input 1abc.pdb --verbose --skip_molprobity. 
 Replace filename with your filename.
 
 6️⃣ **Check results** in the automatically created **results/** folder inside the content/ directory.
